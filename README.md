@@ -33,47 +33,10 @@ A student submits the original question and their attempted solution, receives s
 | Database | MongoDB |
 | API contract | OpenAPI 3.0 |
 | AI integration | Provider abstraction with structured initial output |
-| Interface | Hebrew RTL with a dark default theme |
 
 These are current design decisions and can still change before implementation.
 
-## Repository contents
-
-| Path | Purpose |
-|---|---|
-| [`studyweave-openapi.yaml`](studyweave-openapi.yaml) | Initial HTTP API contract |
-| [`docs/wiki/`](docs/wiki/Home.md) | Product and engineering wiki |
-| [Issues](https://github.com/guythehasilup/StudyWeave/issues) | MVP backlog and acceptance criteria |
-| [`LICENSE`](LICENSE) | MIT license |
-
-## Identity model
-
-Persisted resources use two identifiers:
-
-- `_id`: MongoDB-generated ObjectId, used by persistence.
-- `id`: application-generated UUID, used as the public API identifier.
-
-Clients and URL parameters should use UUIDs. They should not need to understand MongoDB ObjectIds.
-
-## Documentation
-
-Start with the [wiki home](docs/wiki/Home.md):
-
-- [Product overview](docs/wiki/Product-Overview.md)
-- [Architecture](docs/wiki/Architecture.md)
-- [Data model](docs/wiki/Data-Model.md)
-- [API workflow](docs/wiki/API-Workflow.md)
-- [Development guide](docs/wiki/Development-Guide.md)
-- [MVP roadmap](docs/wiki/Roadmap.md)
-
 ## Roadmap
-
-The initial backlog is organized into four phases:
-
-1. Foundation
-2. Core study data
-3. Learning workflow
-4. Quality
 
 See [issue #1](https://github.com/guythehasilup/StudyWeave/issues/1) for the high-level roadmap and the [wiki roadmap](docs/wiki/Roadmap.md) for links to every task.
 
