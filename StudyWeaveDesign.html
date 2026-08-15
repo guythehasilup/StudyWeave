@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>המכלול — RTL Dark UI</title>
+  <style>
+    :root {
+      --ink: #070b15;
+      --canvas: #0b1020;
+      --sidebar: #0f1629;
+      --surface: #141d33;
+      --elevated: #1b2742;
+      --stroke: #2d3a58;
+      --stroke-soft: #222e48;
+      --text: #f5f7ff;
+      --muted: #9ca9c4;
+      --muted-2: #75829c;
+      --brand: #7557f6;
+      --brand-2: #927cff;
+      --info: #43c7e8;
+      --success: #3dd59f;
+      --warning: #f3bf5b;
+      --danger: #ff758c;
+      --r-sm: 10px;
+      --r-md: 14px;
+      --r-lg: 20px;
+      --r-xl: 28px;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .34);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #03060d; color: var(--text); }
+    body {
+      min-width: 1580px;
+      font-family: "Rubik", Arial, sans-serif;
+      line-height: 1.55;
+      padding: 70px;
+    }
+
+    .board {
+      width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 100px;
+    }
+
+    .frame-label {
+      margin: 0 6px 18px;
+      color: #8290aa;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-align: left;
+      direction: ltr;
+    }
+
+    .cover,
+    .screen,
+    .foundation {
+      width: 1440px;
+      overflow: hidden;
+      border: 1px solid #202b43;
+      box-shadow: var(--shadow);
+    }
+
+    .cover {
+      height: 900px;
+      position: relative;
+      border-radius: 32px;
+      background:
+        radial-gradient(circle at 19% 58%, rgba(117, 87, 246, .24), transparent 31%),
+        radial-gradient(circle at 29% 22%, rgba(67, 199, 232, .12), transparent 17%),
+        var(--canvas);
+      padding: 64px 112px;
+    }
+
+    .cover-brand {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+
+    .cover-copy {
+      width: 680px;
+      margin-right: auto;
+      margin-top: 126px;
+      text-align: right;
+    }
+
+    .eyebrow {
+      color: var(--info);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      margin-bottom: 22px;
+    }
+
+    .cover h1 {
+      margin: 0;
+      font-size: 58px;
+      line-height: 1.18;
+      letter-spacing: -.035em;
+    }
+
+    .cover p {
+      width: 650px;
+      margin: 28px 0 0;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1.75;
+    }
+
+    .cover-rule { width: 112px; height: 4px; margin-top: 38px; border-radius: 99px; background: var(--brand); }
+    .cover-meta { margin-top: 22px; color: var(--muted); font-size: 15px; font-weight: 600; }
+    .cover-grid {
+      position: absolute;
+      left: 90px;
+      bottom: 96px;
+      display: grid;
+      grid-template-columns: repeat(2, 155px);
+      gap: 14px;
+      direction: ltr;
+    }
+    .cover-chip {
+      height: 86px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 18px;
+      background: rgba(20,29,51,.72);
+      padding: 16px;
+      backdrop-filter: blur(8px);
+    }
+    .cover-chip b { display: block; color: var(--brand-2); font-size: 22px; }
+    .cover-chip span { color: var(--muted); font-size: 12px; }
+
+    .foundation {
+      min-height: 920px;
+      border-radius: 28px;
+      background: var(--canvas);
+      padding: 64px;
+    }
+    .foundation-head, .section-head, .topbar, .row, .card-head, .question-row, .chat-head, .composer, .file-row, .course-top, .analysis-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .foundation h2 { margin: 0; font-size: 34px; }
+    .foundation-head p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+    .foundation-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; margin-top: 44px; }
+    .token-panel {
+      border: 1px solid var(--stroke-soft);
+      border-radius: 22px;
+      background: var(--surface);
+      padding: 28px;
+    }
+    .token-panel h3 { margin: 0 0 22px; font-size: 18px; }
+    .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .swatch { min-height: 122px; border-radius: 16px; overflow: hidden; border: 1px solid var(--stroke); background: var(--elevated); }
+    .swatch-color { height: 68px; }
+    .swatch-info { padding: 10px 12px; direction: ltr; text-align: left; }
+    .swatch-info b { display: block; font-size: 11px; }
+    .swatch-info small { color: var(--muted); font-size: 10px; }
+    .type-sample { border-top: 1px solid var(--stroke-soft); padding: 20px 0; }
+    .type-sample:first-of-type { border: 0; padding-top: 0; }
+    .type-sample span { display: block; color: var(--muted); font-size: 11px; direction: ltr; text-align: left; margin-bottom: 6px; }
+    .spacing-row { display: flex; align-items: end; gap: 18px; direction: ltr; height: 112px; }
+    .space { width: 56px; border-radius: 8px 8px 0 0; background: linear-gradient(180deg, var(--brand-2), var(--brand)); color: white; font-size: 10px; display: flex; align-items: end; justify-content: center; padding-bottom: 7px; }
+    .rtl-note { margin-top: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .rtl-card { border-radius: 16px; background: var(--elevated); border: 1px solid var(--stroke-soft); padding: 18px; }
+    .rtl-card b { display: block; margin-bottom: 8px; }
+    .rtl-card span { color: var(--muted); font-size: 13px; }
+
+    .screen {
+      height: 1100px;
+      border-radius: 28px;
+      background: var(--canvas);
+      display: grid;
+      grid-template-columns: 1fr 272px;
+      direction: ltr;
+    }
+    .screen.tall { height: 1240px; }
+    .content { direction: rtl; padding: 40px 48px 56px; overflow: hidden; }
+    .sidebar {
+      grid-column: 2;
+      grid-row: 1;
+      direction: rtl;
+      padding: 32px 24px;
+      background: var(--sidebar);
+      border-left: 1px solid var(--stroke-soft);
+      display: flex;
+      flex-direction: column;
+    }
+    .logo { font-size: 22px; font-weight: 800; margin: 0 12px 34px; }
+    .logo i { display: inline-block; width: 12px; height: 12px; background: var(--brand); border-radius: 4px; margin-left: 9px; box-shadow: 0 0 0 5px rgba(117,87,246,.14); }
+    .nav { display: flex; flex-direction: column; gap: 8px; }
+    .nav-item {
+      height: 48px;
+      border-radius: 13px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .nav-item.active { color: white; background: rgba(117,87,246,.16); border: 1px solid rgba(146,124,255,.23); }
+    .nav-icon { width: 28px; height: 28px; border-radius: 9px; background: var(--elevated); display: grid; place-items: center; font-size: 12px; }
+    .nav-item.active .nav-icon { background: var(--brand); }
+    .sidebar-foot { margin-top: auto; }
+    .user-mini { display:flex; gap: 11px; align-items:center; padding: 14px 10px; border-top: 1px solid var(--stroke-soft); }
+    .avatar { width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, var(--brand), var(--info)); display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+    .user-mini b { display:block; font-size: 13px; }
+    .user-mini small { color: var(--muted); }
+
+    .topbar { min-height: 64px; margin-bottom: 34px; }
+    .title-block h2 { margin: 0; font-size: 30px; line-height: 1.35; }
+    .title-block p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+    .actions { display: flex; align-items: center; gap: 12px; }
+    .search { width: 260px; height: 44px; border-radius: 13px; background: var(--surface); border: 1px solid var(--stroke-soft); color: var(--muted); padding: 0 16px; display:flex; align-items:center; justify-content:space-between; font-size: 13px; }
+    .button { height: 44px; border: 0; border-radius: 13px; padding: 0 20px; background: var(--brand); color: white; font-family: inherit; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 9px; box-shadow: 0 10px 24px rgba(117,87,246,.22); }
+    .button.secondary { background: var(--elevated); border: 1px solid var(--stroke); box-shadow: none; color: var(--text); }
+    .button.ghost { background: transparent; border: 1px solid var(--stroke); box-shadow: none; color: var(--muted); }
+
+    .stats { display:grid; grid-template-columns: repeat(3, 1fr); gap:18px; margin-bottom:36px; }
+    .stat { border:1px solid var(--stroke-soft); border-radius:20px; background:var(--surface); padding:22px; min-height:130px; }
+    .stat-top { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:13px; }
+    .stat-icon { width:34px; height:34px; display:grid; place-items:center; border-radius:11px; background:rgba(117,87,246,.15); color:var(--brand-2); }
+    .stat strong { display:block; margin-top:14px; font-size:30px; line-height:1; }
+    .stat small { display:block; color:var(--success); margin-top:8px; }
+    .section-head { margin: 28px 0 18px; }
+    .section-head h3 { margin:0; font-size:19px; }
+    .section-head a { color:var(--brand-2); font-size:13px; font-weight:700; }
+    .course-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .course-card { min-height:210px; border:1px solid var(--stroke-soft); border-radius:20px; background:var(--surface); padding:22px; display:flex; flex-direction:column; }
+    .course-pill { width:max-content; padding:5px 10px; border-radius:99px; background:rgba(67,199,232,.11); color:var(--info); font-size:11px; font-weight:700; }
+    .course-card h4 { margin:17px 0 6px; font-size:17px; }
+    .course-card p { margin:0; color:var(--muted); font-size:13px; line-height:1.7; }
+    .progress { height:7px; border-radius:99px; background:#222c43; overflow:hidden; margin-top:auto; }
+    .progress > i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--brand),var(--brand-2)); }
+    .progress-meta { display:flex; justify-content:space-between; margin-top:9px; color:var(--muted); font-size:11px; }
+
+    .list { border:1px solid var(--stroke-soft); border-radius:20px; background:var(--surface); overflow:hidden; }
+    .question-row { padding:17px 20px; border-bottom:1px solid var(--stroke-soft); gap:20px; }
+    .question-row:last-child { border:0; }
+    .q-main { flex:1; }
+    .q-main b { display:block; font-size:14px; margin-bottom:5px; }
+    .q-main span, .q-time { color:var(--muted); font-size:12px; }
+    .status { padding:5px 9px; border-radius:99px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .status.done { color:var(--success); background:rgba(61,213,159,.10); }
+    .status.wait { color:var(--warning); background:rgba(243,191,91,.10); }
+    .status.info { color:var(--info); background:rgba(67,199,232,.10); }
+
+    .course-hero { border:1px solid var(--stroke-soft); border-radius:22px; padding:26px; background:linear-gradient(135deg,rgba(117,87,246,.18),rgba(20,29,51,.94)); margin-bottom:26px; }
+    .course-code { color:var(--brand-2); font-size:12px; font-weight:700; }
+    .course-hero h2 { margin:8px 0 6px; font-size:28px; }
+    .course-hero p { margin:0; color:var(--muted); font-size:14px; }
+    .course-progress { width:300px; }
+    .course-layout { display:grid; grid-template-columns:1fr 330px; gap:22px; direction:ltr; }
+    .course-layout > * { direction:rtl; }
+    .panel { border:1px solid var(--stroke-soft); border-radius:20px; background:var(--surface); padding:22px; }
+    .panel h3 { margin:0 0 18px; font-size:18px; }
+    .topic { padding:18px 0; border-bottom:1px solid var(--stroke-soft); display:flex; align-items:center; gap:15px; }
+    .topic:last-child { border:0; }
+    .topic-num { width:38px; height:38px; border-radius:12px; background:var(--elevated); color:var(--brand-2); display:grid; place-items:center; font-size:12px; font-weight:800; }
+    .topic-text { flex:1; }
+    .topic-text b { display:block; font-size:14px; }
+    .topic-text span { color:var(--muted); font-size:12px; }
+    .mini-activity { border-radius:14px; background:var(--elevated); padding:15px; margin-bottom:12px; }
+    .mini-activity b { display:block; font-size:13px; margin-bottom:5px; }
+    .mini-activity span { color:var(--muted); font-size:11px; }
+
+    .form-wrap { max-width:860px; margin:0 auto; }
+    .steps { display:flex; justify-content:center; gap:12px; margin:6px 0 34px; direction:rtl; }
+    .step { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
+    .step i { width:28px; height:28px; border-radius:10px; background:var(--elevated); display:grid; place-items:center; font-style:normal; }
+    .step.active { color:var(--text); font-weight:700; }
+    .step.active i { background:var(--brand); }
+    .form-card { border:1px solid var(--stroke-soft); border-radius:24px; background:var(--surface); padding:30px; }
+    .field { margin-bottom:24px; }
+    .field label { display:block; margin-bottom:10px; font-size:13px; font-weight:700; }
+    .input, .textarea { width:100%; border:1px solid var(--stroke); border-radius:14px; background:var(--canvas); color:var(--text); padding:14px 16px; font:inherit; font-size:14px; text-align:right; }
+    .input { height:50px; display:flex; align-items:center; justify-content:space-between; color:var(--muted); }
+    .textarea { min-height:118px; line-height:1.75; color:var(--muted); }
+    .textarea.large { min-height:154px; color:var(--text); }
+    .hint { color:var(--muted); font-size:11px; margin-top:8px; }
+    .dropzone { height:116px; border:1px dashed #4a5875; border-radius:16px; background:rgba(117,87,246,.04); display:grid; place-items:center; text-align:center; color:var(--muted); font-size:12px; }
+    .dropzone b { color:var(--brand-2); }
+    .form-actions { display:flex; justify-content:space-between; align-items:center; padding-top:8px; }
+
+    .detail-grid { display:grid; grid-template-columns:minmax(0,1fr) 355px; gap:22px; direction:ltr; }
+    .detail-grid > * { direction:rtl; }
+    .stack { display:flex; flex-direction:column; gap:18px; }
+    .question-card, .analysis-card, .chat { border:1px solid var(--stroke-soft); border-radius:20px; background:var(--surface); }
+    .question-card { padding:24px; }
+    .question-card .overline { color:var(--brand-2); font-size:11px; font-weight:700; }
+    .question-card h3 { margin:10px 0 14px; font-size:19px; line-height:1.6; }
+    .formula { direction:ltr; text-align:center; padding:18px; border-radius:14px; background:var(--canvas); font-family:Georgia,serif; font-size:22px; margin:16px 0; }
+    .attempt { border-top:1px solid var(--stroke-soft); margin-top:20px; padding-top:20px; }
+    .attempt b { font-size:13px; }
+    .attempt p { margin:8px 0 0; color:var(--muted); font-size:13px; line-height:1.8; }
+    .analysis-card { overflow:hidden; }
+    .analysis-title { padding:20px 22px; border-bottom:1px solid var(--stroke-soft); }
+    .analysis-title h3 { margin:0; font-size:17px; }
+    .analysis-body { padding:8px 22px 20px; }
+    .analysis-item { display:grid; grid-template-columns:32px 1fr; gap:12px; padding:16px 0; border-bottom:1px solid var(--stroke-soft); direction:rtl; }
+    .analysis-item:last-child { border:0; }
+    .analysis-num { width:30px; height:30px; border-radius:10px; background:rgba(117,87,246,.14); color:var(--brand-2); display:grid; place-items:center; font-size:11px; font-weight:800; }
+    .analysis-item b { font-size:13px; }
+    .analysis-item p { margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.75; }
+    .chat { height:850px; display:flex; flex-direction:column; overflow:hidden; }
+    .chat-head { padding:20px; border-bottom:1px solid var(--stroke-soft); }
+    .chat-head b { font-size:15px; }
+    .online { color:var(--success); font-size:10px; }
+    .messages { flex:1; padding:20px; display:flex; flex-direction:column; gap:14px; overflow:hidden; }
+    .bubble { max-width:90%; border-radius:16px; padding:13px 14px; font-size:12px; line-height:1.75; }
+    .bubble.ai { align-self:flex-start; background:var(--elevated); border-bottom-right-radius:5px; color:var(--text); }
+    .bubble.user { align-self:flex-end; background:var(--brand); border-bottom-left-radius:5px; }
+    .bubble small { display:block; margin-top:6px; opacity:.65; font-size:9px; }
+    .composer { padding:14px; border-top:1px solid var(--stroke-soft); gap:10px; }
+    .composer-box { height:44px; flex:1; border:1px solid var(--stroke); border-radius:13px; background:var(--canvas); color:var(--muted); padding:0 13px; display:flex; align-items:center; font-size:11px; }
+    .send { width:44px; height:44px; border-radius:13px; background:var(--brand); display:grid; place-items:center; font-size:15px; }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section>
+      <div class="frame-label">00 · COVER</div>
+      <div class="cover">
+        <div class="cover-brand">המכלול</div>
+        <div class="cover-copy">
+          <div class="eyebrow">מערכת עיצוב ראשונית · RTL · מצב כהה</div>
+          <h1>ללמוד עמוק יותר.<br />לסדר הכול במקום אחד.</h1>
+          <p>מרחב לימוד חכם שמארגן קורסים, שאלות, ניסיונות פתרון ושיחות המשך — עם מרווח נדיב וקריאות גבוהה בעברית.</p>
+          <div class="cover-rule"></div>
+          <div class="cover-meta">4 מסכי מוצר · רכיבים עקביים · בסיס מוכן להרחבה</div>
+        </div>
+        <div class="cover-grid">
+          <div class="cover-chip"><b>RTL</b><span>יישור וכיווניות טבעיים</span></div>
+          <div class="cover-chip"><b>AA</b><span>ניגודיות וטקסט קריא</span></div>
+          <div class="cover-chip"><b>8pt</b><span>מערכת מרווחים עקבית</span></div>
+          <div class="cover-chip"><b>Dark</b><span>ערכת נושא כברירת מחדל</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="frame-label">01 · FOUNDATIONS</div>
+      <div class="foundation">
+        <div class="foundation-head">
+          <div><h2>יסודות הממשק</h2><p>צבע, טיפוגרפיה, מרווחים ועקרונות RTL</p></div>
+          <div class="course-pill">המכלול UI · v0.1</div>
+        </div>
+        <div class="foundation-grid">
+          <div class="token-panel">
+            <h3>ערכת צבעים כהה</h3>
+            <div class="swatches">
+              <div class="swatch"><div class="swatch-color" style="background:#0b1020"></div><div class="swatch-info"><b>Canvas</b><small>#0B1020</small></div></div>
+              <div class="swatch"><div class="swatch-color" style="background:#141d33"></div><div class="swatch-info"><b>Surface</b><small>#141D33</small></div></div>
+              <div class="swatch"><div class="swatch-color" style="background:#1b2742"></div><div class="swatch-info"><b>Elevated</b><small>#1B2742</small></div></div>
+              <div class="swatch"><div class="swatch-color" style="background:#7557f6"></div><div class="swatch-info"><b>Brand</b><small>#7557F6</small></div></div>
+              <div class="swatch"><div class="swatch-color" style="background:#43c7e8"></div><div class="swatch-info"><b>Info</b><small>#43C7E8</small></div></div>
+              <div class="swatch"><div class="swatch-color" style="background:#3dd59f"></div><div class="swatch-info"><b>Success</b><small>#3DD59F</small></div></div>
+              <div class="swatch"><div class="swatch-color" style="background:#f3bf5b"></div><div class="swatch-info"><b>Warning</b><small>#F3BF5B</small></div></div>
+              <div class="swatch"><div class="swatch-color" style="background:#f5f7ff"></div><div class="swatch-info"><b>Text</b><small>#F5F7FF</small></div></div>
+            </div>
+          </div>
+          <div class="token-panel">
+            <h3>טיפוגרפיה מרווחת</h3>
+            <div class="type-sample"><span>H1 / 36 / 46</span><div style="font-size:36px;font-weight:800;line-height:46px">כותרת ראשית ברורה</div></div>
+            <div class="type-sample"><span>H2 / 24 / 34</span><div style="font-size:24px;font-weight:700;line-height:34px">ארגון חכם לכל קורס</div></div>
+            <div class="type-sample"><span>Body / 16 / 26</span><div style="font-size:16px;line-height:26px;color:var(--muted)">טקסט רץ מקבל מספיק מרחב נשימה כדי להישאר נוח לקריאה גם במסכים עמוסים.</div></div>
+          </div>
+          <div class="token-panel">
+            <h3>מרווחים · 8pt</h3>
+            <div class="spacing-row">
+              <div class="space" style="height:16px">8</div>
+              <div class="space" style="height:28px">16</div>
+              <div class="space" style="height:42px">24</div>
+              <div class="space" style="height:62px">32</div>
+              <div class="space" style="height:92px">48</div>
+            </div>
+          </div>
+          <div class="token-panel">
+            <h3>עקרונות RTL</h3>
+            <div class="rtl-note">
+              <div class="rtl-card"><b>ניווט מימין</b><span>סרגל האפליקציה נשען לקצה הימני.</span></div>
+              <div class="rtl-card"><b>טקסט מיושר</b><span>כותרות ותוכן נקראים בכיוון טבעי.</span></div>
+              <div class="rtl-card"><b>פעולה מובילה</b><span>כפתור ראשי מופיע בנקודת הסריקה הנוחה.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="frame-label">02 · DASHBOARD</div>
+      <div class="screen">
+        <div class="content">
+          <div class="topbar">
+            <div class="title-block"><h2>ערב טוב, נועם</h2><p>הנה מה שמחכה לך במרחב הלימוד</p></div>
+            <div class="actions"><div class="search"><span>חיפוש בקורסים ובשאלות</span><span>⌕</span></div><button class="button">＋ שאלה חדשה</button></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="stat-top"><span>שאלות פתוחות</span><span class="stat-icon">?</span></div><strong>7</strong><small>2 חדשות השבוע</small></div>
+            <div class="stat"><div class="stat-top"><span>קורסים פעילים</span><span class="stat-icon">▦</span></div><strong>4</strong><small>התקדמות יציבה</small></div>
+            <div class="stat"><div class="stat-top"><span>רצף למידה</span><span class="stat-icon">↗</span></div><strong>12</strong><small>ימים ברצף</small></div>
+          </div>
+          <div class="section-head"><h3>הקורסים שלך</h3><a>לכל הקורסים ←</a></div>
+          <div class="course-grid">
+            <div class="course-card"><span class="course-pill">מתמטיקה</span><h4>אלגברה לינארית</h4><p>מרחבים וקטוריים, מטריצות וערכים עצמיים.</p><div class="progress"><i style="width:72%"></i></div><div class="progress-meta"><span>72%</span><span>8 מתוך 11 נושאים</span></div></div>
+            <div class="course-card"><span class="course-pill" style="color:var(--success);background:rgba(61,213,159,.1)">מדעי המחשב</span><h4>מבני נתונים</h4><p>עצים, גרפים, תורים וניתוח סיבוכיות.</p><div class="progress"><i style="width:58%"></i></div><div class="progress-meta"><span>58%</span><span>7 מתוך 12 נושאים</span></div></div>
+            <div class="course-card"><span class="course-pill" style="color:var(--warning);background:rgba(243,191,91,.1)">כימיה</span><h4>כימיה אורגנית</h4><p>מבנה מולקולרי, תגובות וקבוצות פונקציונליות.</p><div class="progress"><i style="width:41%"></i></div><div class="progress-meta"><span>41%</span><span>5 מתוך 12 נושאים</span></div></div>
+          </div>
+          <div class="section-head"><h3>שאלות אחרונות</h3><a>לארכיון ←</a></div>
+          <div class="list">
+            <div class="question-row"><div class="q-main"><b>איך מוכיחים שקבוצה היא תת־מרחב?</b><span>אלגברה לינארית · מרחבים וקטוריים</span></div><span class="status done">נותח</span><span class="q-time">לפני שעתיים</span></div>
+            <div class="question-row"><div class="q-main"><b>למה פעולת מחיקה בעץ AVL דורשת איזון חוזר?</b><span>מבני נתונים · עצים מאוזנים</span></div><span class="status wait">בטיפול</span><span class="q-time">אתמול</span></div>
+            <div class="question-row"><div class="q-main"><b>איך מזהים מנגנון SN1 לעומת SN2?</b><span>כימיה אורגנית · תגובות החלפה</span></div><span class="status info">טיוטה</span><span class="q-time">לפני 3 ימים</span></div>
+          </div>
+        </div>
+        <aside class="sidebar">
+          <div class="logo"><i></i>המכלול</div>
+          <nav class="nav">
+            <div class="nav-item active"><span class="nav-icon">⌂</span><span>מסך הבית</span></div>
+            <div class="nav-item"><span class="nav-icon">▦</span><span>הקורסים שלי</span></div>
+            <div class="nav-item"><span class="nav-icon">?</span><span>שאלות</span></div>
+            <div class="nav-item"><span class="nav-icon">✦</span><span>תובנות</span></div>
+            <div class="nav-item"><span class="nav-icon">⚙</span><span>הגדרות</span></div>
+          </nav>
+          <div class="sidebar-foot"><div class="user-mini"><div class="avatar">נל</div><div><b>נועם לוי</b><small>סטודנט</small></div></div></div>
+        </aside>
+      </div>
+    </section>
+
+    <section>
+      <div class="frame-label">03 · COURSE</div>
+      <div class="screen">
+        <div class="content">
+          <div class="topbar"><div class="title-block"><p>הקורסים שלי / סמסטר ב׳</p></div><div class="actions"><button class="button secondary">שתף קורס</button><button class="button">＋ שאלה חדשה</button></div></div>
+          <div class="course-hero">
+            <div class="course-top"><div><span class="course-code">CS-204 · סמסטר ב׳</span><h2>מבני נתונים ואלגוריתמים</h2><p>ד״ר מיכל שלו · יום שלישי 10:00</p></div><div class="course-progress"><div class="progress"><i style="width:58%"></i></div><div class="progress-meta"><span>58% הושלמו</span><span>7 מתוך 12 נושאים</span></div></div></div>
+          </div>
+          <div class="course-layout">
+            <div class="panel"><h3>נושאי הקורס</h3>
+              <div class="topic"><div class="topic-num">01</div><div class="topic-text"><b>ניתוח סיבוכיות</b><span>Big O, חסמים והשוואת אלגוריתמים</span></div><span class="status done">הושלם</span></div>
+              <div class="topic"><div class="topic-num">02</div><div class="topic-text"><b>רשימות, מחסניות ותורים</b><span>מבני נתונים לינאריים ויישומים</span></div><span class="status done">הושלם</span></div>
+              <div class="topic"><div class="topic-num">03</div><div class="topic-text"><b>עצים בינאריים</b><span>סריקות, חיפוש ועצי ביטוי</span></div><span class="status info">פעיל</span></div>
+              <div class="topic"><div class="topic-num">04</div><div class="topic-text"><b>עצים מאוזנים</b><span>AVL, Red-Black וסיבובים</span></div><span class="status wait">3 שאלות</span></div>
+              <div class="topic"><div class="topic-num">05</div><div class="topic-text"><b>גרפים</b><span>BFS, DFS ומסלולים קצרים</span></div><span class="status info">הבא</span></div>
+              <div class="topic"><div class="topic-num">06</div><div class="topic-text"><b>גיבוב</b><span>פונקציות Hash וטיפול בהתנגשויות</span></div><span class="status info">נעול</span></div>
+            </div>
+            <div class="panel"><h3>פעילות אחרונה</h3>
+              <div class="mini-activity"><b>שאלה נוספה לעצי AVL</b><span>לפני שעתיים · ממתינה לניתוח</span></div>
+              <div class="mini-activity"><b>סיכום נושא עודכן</b><span>אתמול · עצים בינאריים</span></div>
+              <div class="mini-activity"><b>התקדמות חדשה</b><span>שלשום · השלמת ניתוח סיבוכיות</span></div>
+              <div class="section-head" style="margin-top:28px"><h3>מצב השאלות</h3></div>
+              <div class="stat" style="min-height:auto"><div class="stat-top"><span>נפתרו</span><span>14</span></div><div class="progress" style="margin-top:12px"><i style="width:70%"></i></div></div>
+            </div>
+          </div>
+        </div>
+        <aside class="sidebar">
+          <div class="logo"><i></i>המכלול</div>
+          <nav class="nav"><div class="nav-item"><span class="nav-icon">⌂</span><span>מסך הבית</span></div><div class="nav-item active"><span class="nav-icon">▦</span><span>הקורסים שלי</span></div><div class="nav-item"><span class="nav-icon">?</span><span>שאלות</span></div><div class="nav-item"><span class="nav-icon">✦</span><span>תובנות</span></div><div class="nav-item"><span class="nav-icon">⚙</span><span>הגדרות</span></div></nav>
+          <div class="sidebar-foot"><div class="user-mini"><div class="avatar">נל</div><div><b>נועם לוי</b><small>סטודנט</small></div></div></div>
+        </aside>
+      </div>
+    </section>
+
+    <section>
+      <div class="frame-label">04 · NEW QUESTION</div>
+      <div class="screen">
+        <div class="content">
+          <div class="topbar"><div class="title-block"><h2>שאלה חדשה</h2><p>אפשר להוסיף גם את ניסיון הפתרון שלך כדי לקבל ניתוח מדויק יותר</p></div><button class="button ghost">שמירה כטיוטה</button></div>
+          <div class="form-wrap">
+            <div class="steps"><div class="step active"><i>1</i><span>פרטי השאלה</span></div><div class="step"><i>2</i><span>ניסיון פתרון</span></div><div class="step"><i>3</i><span>בדיקה ושליחה</span></div></div>
+            <div class="form-card">
+              <div class="field"><label>קורס ונושא</label><div class="input"><span>מבני נתונים · עצים מאוזנים</span><span>⌄</span></div></div>
+              <div class="field"><label>כותרת קצרה</label><div class="input" style="color:var(--text)">למה פעולת מחיקה בעץ AVL דורשת איזון חוזר?</div></div>
+              <div class="field"><label>השאלה המלאה</label><div class="textarea large">לאחר שמוחקים צומת בעץ AVL, גובה תת־העץ יכול להשתנות. אני מבין שצריך לבדוק את מקדם האיזון, אבל לא ברור לי באיזה צומת מתחילים ומתי אפשר לעצור.</div><div class="hint">כדאי לכלול נתונים, הנחות ומה בדיוק לא ברור.</div></div>
+              <div class="field"><label>ניסיון הפתרון שלי</label><div class="textarea">ניסיתי לעבור מהצומת שנמחק כלפי מעלה ולבצע סיבוב בכל פעם שמקדם האיזון גדול מ־1 בערך מוחלט, אבל אני לא בטוח אם מספיק סיבוב יחיד.</div></div>
+              <div class="field"><label>קבצים וחומר עזר</label><div class="dropzone"><div><b>העלאת צילום, PDF או קובץ</b><br />אפשר גם לגרור לכאן · עד 10MB</div></div></div>
+              <div class="form-actions"><button class="button secondary">חזרה לקורס</button><button class="button">שליחה לניתוח ←</button></div>
+            </div>
+          </div>
+        </div>
+        <aside class="sidebar">
+          <div class="logo"><i></i>המכלול</div>
+          <nav class="nav"><div class="nav-item"><span class="nav-icon">⌂</span><span>מסך הבית</span></div><div class="nav-item"><span class="nav-icon">▦</span><span>הקורסים שלי</span></div><div class="nav-item active"><span class="nav-icon">?</span><span>שאלות</span></div><div class="nav-item"><span class="nav-icon">✦</span><span>תובנות</span></div><div class="nav-item"><span class="nav-icon">⚙</span><span>הגדרות</span></div></nav>
+          <div class="sidebar-foot"><div class="user-mini"><div class="avatar">נל</div><div><b>נועם לוי</b><small>סטודנט</small></div></div></div>
+        </aside>
+      </div>
+    </section>
+
+    <section>
+      <div class="frame-label">05 · QUESTION DETAIL + CHAT</div>
+      <div class="screen tall">
+        <div class="content">
+          <div class="topbar"><div class="title-block"><p>מבני נתונים / עצים מאוזנים</p><h2>ניתוח שאלה</h2></div><div class="actions"><span class="status done">הניתוח הושלם</span><button class="button secondary">ייצוא לסיכום</button></div></div>
+          <div class="detail-grid">
+            <div class="stack">
+              <div class="question-card"><span class="overline">השאלה המקורית</span><h3>למה פעולת מחיקה בעץ AVL דורשת איזון חוזר, ומאיזה צומת צריך להתחיל?</h3><div class="formula">balance(v) = height(left) − height(right)</div><div class="attempt"><b>ניסיון הפתרון שלי</b><p>עברתי מהצומת שנמחק כלפי מעלה ובדקתי את מקדם האיזון בכל אב קדמון. לא הייתי בטוח אם אחרי סיבוב יחיד אפשר לעצור.</p></div></div>
+              <div class="analysis-card">
+                <div class="analysis-title"><h3>ניתוח מובנה</h3><span class="status info">4 שלבים</span></div>
+                <div class="analysis-body">
+                  <div class="analysis-item"><div class="analysis-num">1</div><div><b>מה השתנה אחרי המחיקה</b><p>מחיקה יכולה להקטין את גובהו של תת־עץ. לכן מקדם האיזון של כל אב קדמון במסלול לשורש עשוי להשתנות.</p></div></div>
+                  <div class="analysis-item"><div class="analysis-num">2</div><div><b>מאיפה מתחילים</b><p>מתחילים מההורה הקרוב ביותר למיקום שבו בוצעה המחיקה, ואז מתקדמים כלפי מעלה.</p></div></div>
+                  <div class="analysis-item"><div class="analysis-num">3</div><div><b>איך בוחרים סיבוב</b><p>בודקים את סימן מקדם האיזון ואת מבנה תת־העץ הכבד כדי לבחור בין סיבוב יחיד לכפול.</p></div></div>
+                  <div class="analysis-item"><div class="analysis-num">4</div><div><b>מתי עוצרים</b><p>אחרי תיקון ממשיכים לבדוק אבות נוספים, משום שבמחיקה שינוי הגובה יכול להתפשט עד לשורש.</p></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="chat">
+              <div class="chat-head"><div><b>שיחת המשך</b><div class="online">● מוכן לעזור</div></div><span>•••</span></div>
+              <div class="messages">
+                <div class="bubble ai">הנקודה המרכזית היא שמחיקה, בניגוד להכנסה, יכולה להקטין גובה גם אחרי שביצענו סיבוב. לכן ממשיכים במסלול כלפי השורש.<small>המכלול · 18:42</small></div>
+                <div class="bubble user">אז בהכנסה בדרך כלל אפשר לעצור אחרי הסיבוב הראשון?</div>
+                <div class="bubble ai">כן. בהכנסה, הסיבוב הראשון שמחזיר איזון גם מחזיר את גובה תת־העץ לגובה שהיה לפני ההכנסה. במחיקה זה לא מובטח.<small>המכלול · 18:43</small></div>
+                <div class="bubble user">אפשר לתת לי דוגמה קטנה עם שלושה צמתים?</div>
+                <div class="bubble ai">בוודאי. נתחיל מעץ שבו הצומת השמאלי כבד, נמחק עלה מהצד הימני, ואז נבדוק את מקדם האיזון של ההורה ושל הסבא.<small>המכלול · 18:44</small></div>
+              </div>
+              <div class="composer"><div class="composer-box">כתוב שאלת המשך…</div><div class="send">←</div></div>
+            </div>
+          </div>
+        </div>
+        <aside class="sidebar">
+          <div class="logo"><i></i>המכלול</div>
+          <nav class="nav"><div class="nav-item"><span class="nav-icon">⌂</span><span>מסך הבית</span></div><div class="nav-item"><span class="nav-icon">▦</span><span>הקורסים שלי</span></div><div class="nav-item active"><span class="nav-icon">?</span><span>שאלות</span></div><div class="nav-item"><span class="nav-icon">✦</span><span>תובנות</span></div><div class="nav-item"><span class="nav-icon">⚙</span><span>הגדרות</span></div></nav>
+          <div class="sidebar-foot"><div class="user-mini"><div class="avatar">נל</div><div><b>נועם לוי</b><small>סטודנט</small></div></div></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
