@@ -36,17 +36,6 @@ A student submits the original question and their attempted solution, receives s
 
 These are current design decisions and can still change before implementation.
 
-## Documentation
-
-The project documentation lives in the [StudyWeave Wiki](https://github.com/guythehasilup/StudyWeave/wiki):
-
-- [Product overview](https://github.com/guythehasilup/StudyWeave/wiki/Product-Overview)
-- [Architecture](https://github.com/guythehasilup/StudyWeave/wiki/Architecture)
-- [Data model](https://github.com/guythehasilup/StudyWeave/wiki/Data-Model)
-- [API workflow](https://github.com/guythehasilup/StudyWeave/wiki/API-Workflow)
-- [Development guide](https://github.com/guythehasilup/StudyWeave/wiki/Development-Guide)
-- [Roadmap](https://github.com/guythehasilup/StudyWeave/wiki/Roadmap)
-
 ## Roadmap
 
 See [issue #1](https://github.com/guythehasilup/StudyWeave/issues/1) for the high-level roadmap and the [wiki roadmap](https://github.com/guythehasilup/StudyWeave/wiki/Roadmap) for links to every task.
