@@ -1,0 +1,785 @@
+openapi: 3.0.3
+info:
+  title: StudyWeave API
+  version: 0.1.0
+  description: |
+    Initial API contract for StudyWeave, a study workspace that stores questions,
+    student attempts, structured AI feedback, and persistent follow-up conversations.
+servers:
+  - url: https://localhost:5001/api
+    description: Local ASP.NET Core API
+tags:
+  - name: Users
+  - name: Courses
+  - name: Topics
+  - name: Questions
+  - name: Conversations
+paths:
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get the current user
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    patch:
+      tags: [Users]
+      summary: Update the current user's basic profile
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: List the user's courses
+      operationId: listCourses
+      responses:
+        '200':
+          description: Courses returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+    post:
+      tags: [Courses]
+      summary: Create a course
+      operationId: createCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCourseRequest'
+      responses:
+        '201':
+          description: Course created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /courses/{courseId}:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    patch:
+      tags: [Courses]
+      summary: Update a course
+      operationId: updateCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCourseRequest'
+      responses:
+        '200':
+          description: Course updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Courses]
+      summary: Delete a course
+      operationId: deleteCourse
+      responses:
+        '204':
+          description: Course deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /courses/{courseId}/topics:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Topics]
+      summary: List topics in a course
+      operationId: listTopics
+      responses:
+        '200':
+          description: Topics returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Topic'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Topics]
+      summary: Create a topic in a course
+      operationId: createTopic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTopicRequest'
+      responses:
+        '201':
+          description: Topic created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /courses/{courseId}/topics/{topicId}:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+      - $ref: '#/components/parameters/TopicId'
+    patch:
+      tags: [Topics]
+      summary: Update a topic
+      operationId: updateTopic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTopicRequest'
+      responses:
+        '200':
+          description: Topic updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Topics]
+      summary: Delete a topic
+      operationId: deleteTopic
+      responses:
+        '204':
+          description: Topic deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /questions:
+    get:
+      tags: [Questions]
+      summary: Search and list saved study questions
+      operationId: listQuestions
+      parameters:
+        - name: courseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: topicId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          description: Searches question titles, text, concepts, and lessons
+          schema:
+            type: string
+        - name: reviewStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReviewStatus'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated questions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedQuestions'
+    post:
+      tags: [Questions]
+      summary: Save a question and request its initial AI analysis
+      operationId: createQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuestionRequest'
+      responses:
+        '201':
+          description: Question saved and analyzed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyQuestion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          description: The question could not be analyzed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /questions/{questionId}:
+    parameters:
+      - $ref: '#/components/parameters/QuestionId'
+    get:
+      tags: [Questions]
+      summary: Open a saved question with its analysis and conversation
+      operationId: getQuestion
+      responses:
+        '200':
+          description: Full question workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyQuestion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Questions]
+      summary: Delete a saved question
+      operationId: deleteQuestion
+      responses:
+        '204':
+          description: Question deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /questions/{questionId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/QuestionId'
+    get:
+      tags: [Conversations]
+      summary: List the persistent conversation for a question
+      operationId: listQuestionMessages
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation messages in chronological order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagePage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Conversations]
+      summary: Ask a follow-up question inside the saved question
+      operationId: createFollowUpMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFollowUpRequest'
+      responses:
+        '201':
+          description: Follow-up question and AI answer saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowUpResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: The AI provider could not produce an answer
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    CourseId:
+      name: courseId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    QuestionId:
+      name: questionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TopicId:
+      name: topicId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Resource was not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    MongoEntity:
+      type: object
+      required: [_id, id]
+      properties:
+        _id:
+          type: string
+          readOnly: true
+          description: MongoDB-generated ObjectId serialized as a 24-character hexadecimal string.
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: 66b7c0f5e8e5b2b4c6c1a001
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Application-generated public identifier.
+          example: 2f7d6f4a-9a5e-4c15-9b8f-3b7bb0db7f36
+
+    User:
+      allOf:
+        - $ref: '#/components/schemas/MongoEntity'
+        - type: object
+          required: [username, email, createdAt, updatedAt]
+          properties:
+            username:
+              type: string
+              example: guy
+            email:
+              type: string
+              format: email
+              example: student@example.com
+            displayName:
+              type: string
+              nullable: true
+              example: Guy Yanklov
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          nullable: true
+          maxLength: 100
+
+    Course:
+      allOf:
+        - $ref: '#/components/schemas/MongoEntity'
+        - type: object
+          required: [name, createdAt, updatedAt]
+          properties:
+            name:
+              type: string
+              example: Calculus 2
+            description:
+              type: string
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    CreateCourseRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          nullable: true
+
+    UpdateCourseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          nullable: true
+
+    Topic:
+      allOf:
+        - $ref: '#/components/schemas/MongoEntity'
+        - type: object
+          required: [courseId, name, createdAt, updatedAt]
+          properties:
+            courseId:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Power Series
+            questionCount:
+              type: integer
+              minimum: 0
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    CreateTopicRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    UpdateTopicRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    CreateQuestionRequest:
+      type: object
+      required: [courseId, title, questionText]
+      properties:
+        courseId:
+          type: string
+          format: uuid
+        topicId:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+          example: Find the interval of convergence
+        questionText:
+          type: string
+        studentAttempt:
+          type: string
+          nullable: true
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+
+    StudyQuestion:
+      allOf:
+        - $ref: '#/components/schemas/MongoEntity'
+        - type: object
+          required:
+            - courseId
+            - title
+            - questionText
+            - analysisStatus
+            - analysis
+            - messages
+            - reviewStatus
+            - createdAt
+            - updatedAt
+          properties:
+            courseId:
+              type: string
+              format: uuid
+            topicId:
+              type: string
+              format: uuid
+              nullable: true
+            title:
+              type: string
+            questionText:
+              type: string
+            studentAttempt:
+              type: string
+              nullable: true
+            attachments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Attachment'
+            analysisStatus:
+              type: string
+              enum: [pending, completed, failed]
+            analysis:
+              allOf:
+                - $ref: '#/components/schemas/Analysis'
+              nullable: true
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/ConversationMessage'
+            reviewStatus:
+              $ref: '#/components/schemas/ReviewStatus'
+            isPinned:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    Analysis:
+      allOf:
+        - $ref: '#/components/schemas/MongoEntity'
+        - type: object
+          required:
+            - version
+            - verdict
+            - shortAnswer
+            - correctParts
+            - firstIncorrectStep
+            - correctedSolution
+            - keyConcepts
+            - lessonToRemember
+            - suggestedReviewQuestion
+            - generatedAt
+          properties:
+            version:
+              type: integer
+              minimum: 1
+            verdict:
+              type: string
+              enum: [correct, partially_correct, incorrect, insufficient_information]
+            shortAnswer:
+              type: string
+            correctParts:
+              type: array
+              items:
+                type: string
+            firstIncorrectStep:
+              type: string
+              nullable: true
+            correctedSolution:
+              type: array
+              items:
+                type: string
+            keyConcepts:
+              type: array
+              items:
+                type: string
+            lessonToRemember:
+              type: string
+            suggestedReviewQuestion:
+              type: string
+            generatedAt:
+              type: string
+              format: date-time
+            provider:
+              type: string
+              example: openai
+            model:
+              type: string
+
+    ConversationMessage:
+      allOf:
+        - $ref: '#/components/schemas/MongoEntity'
+        - type: object
+          required: [role, messageType, content, createdAt]
+          properties:
+            role:
+              type: string
+              enum: [user, assistant]
+            messageType:
+              type: string
+              enum: [original_question, initial_analysis, follow_up_question, follow_up_answer]
+            content:
+              type: string
+              description: Markdown or plain text rendered by the client
+            createdAt:
+              type: string
+              format: date-time
+            providerResponseId:
+              type: string
+              nullable: true
+
+    CreateFollowUpRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+
+    FollowUpResult:
+      type: object
+      required: [userMessage, assistantMessage]
+      properties:
+        userMessage:
+          $ref: '#/components/schemas/ConversationMessage'
+        assistantMessage:
+          $ref: '#/components/schemas/ConversationMessage'
+
+    Attachment:
+      allOf:
+        - $ref: '#/components/schemas/MongoEntity'
+        - type: object
+          required: [fileName, contentType, url]
+          properties:
+            fileName:
+              type: string
+            contentType:
+              type: string
+              example: image/png
+            url:
+              type: string
+              format: uri
+
+    ReviewStatus:
+      type: string
+      enum: [not_reviewed, needs_review, understood]
+
+    PagedQuestions:
+      type: object
+      required: [items, page, pageSize, totalCount, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionListItem'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    QuestionListItem:
+      type: object
+      required: [_id, id, title, courseId, analysisStatus, reviewStatus, updatedAt]
+      properties:
+        _id:
+          type: string
+          readOnly: true
+          pattern: '^[a-fA-F0-9]{24}$'
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        courseId:
+          type: string
+          format: uuid
+        topicId:
+          type: string
+          format: uuid
+          nullable: true
+        verdict:
+          type: string
+          nullable: true
+        keyConcepts:
+          type: array
+          items:
+            type: string
+        messageCount:
+          type: integer
+        analysisStatus:
+          type: string
+          enum: [pending, completed, failed]
+        reviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+        updatedAt:
+          type: string
+          format: date-time
+
+    MessagePage:
+      type: object
+      required: [items, hasMore]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+        nextCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        traceId:
+          type: string
+
+security:
+  - bearerAuth: []
