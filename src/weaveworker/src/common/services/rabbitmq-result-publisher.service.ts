@@ -2,52 +2,37 @@ import { once } from 'node:events';
 import amqp, { type ChannelModel, type ConfirmChannel } from 'amqplib';
 import { appConfig } from '../config/app.config.js';
 import { mqEndpoints } from '../messaging/mq-endpoints.js';
+import type { AiResultEvent } from '../../weave/types/ai-result-event.type.js';
 
-export class RabbitMqPublisherService {
+export class RabbitMqResultPublisherService {
   private connection: ChannelModel | null = null;
   private channel: ConfirmChannel | null = null;
   private connectionPromise: Promise<ConfirmChannel> | null = null;
 
-  public async publishToRequestQueue(
-    content: Buffer,
-    messageId: string,
-    messageType: string,
-  ): Promise<void> {
-    await this.publish(async (channel) => {
-      const accepted = channel.sendToQueue(mqEndpoints.aiRequests.queue, content, {
+  public async publishResult(event: AiResultEvent): Promise<void> {
+    try {
+      const channel = await this.getChannel();
+
+      const content = Buffer.from(JSON.stringify(event), 'utf8');
+
+      const accepted = channel.sendToQueue(mqEndpoints.aiResults.queue, content, {
         persistent: true,
         contentType: 'application/json',
         contentEncoding: 'utf-8',
-        messageId,
-        type: messageType,
+        messageId: event.eventId,
+        type: mqEndpoints.aiResults.messageType,
         timestamp: Date.now(),
       });
 
       if (!accepted) {
         await once(channel, 'drain');
       }
-    });
-  }
 
-  public async publishCancellation(
-    content: Buffer,
-    messageId: string,
-    messageType: string,
-  ): Promise<void> {
-    await this.publish(async (channel) => {
-      const accepted = channel.publish(mqEndpoints.aiCancellations.exchange, '', content, {
-        persistent: true,
-        contentType: 'application/json',
-        contentEncoding: 'utf-8',
-        messageId,
-        type: messageType,
-        timestamp: Date.now(),
-      });
-
-      if (!accepted) {
-        await once(channel, 'drain');
-      }
-    });
+      await channel.waitForConfirms();
+    } catch (error: unknown) {
+      await this.close();
+      throw error;
+    }
   }
 
   public async close(): Promise<void> {
@@ -65,18 +50,6 @@ export class RabbitMqPublisherService {
 
     if (connection) {
       await connection.close().catch(() => undefined);
-    }
-  }
-
-  private async publish(action: (channel: ConfirmChannel) => Promise<void>): Promise<void> {
-    try {
-      const channel = await this.getChannel();
-
-      await action(channel);
-      await channel.waitForConfirms();
-    } catch (error: unknown) {
-      await this.close();
-      throw error;
     }
   }
 
@@ -109,14 +82,11 @@ export class RabbitMqPublisherService {
       }
     });
 
-    await channel.assertQueue(mqEndpoints.aiRequests.queue, {
+    await channel.assertQueue(mqEndpoints.aiResults.queue, {
       durable: true,
       arguments: {
         'x-queue-type': 'quorum',
       },
-    });
-    await channel.assertExchange(mqEndpoints.aiCancellations.exchange, 'fanout', {
-      durable: true,
     });
 
     this.connection = connection;
@@ -126,4 +96,4 @@ export class RabbitMqPublisherService {
   }
 }
 
-export const rabbitMqPublisherService = new RabbitMqPublisherService();
+export const rabbitMqResultPublisherService = new RabbitMqResultPublisherService();

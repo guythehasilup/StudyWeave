@@ -1,4 +1,6 @@
+import type { QueryFilter, UpdateQuery } from 'mongoose';
 import { appConfig } from '../../common/config/app.config.js';
+import { mqEndpoints } from '../../common/messaging/mq-endpoints.js';
 import { rabbitMqPublisherService } from '../../common/services/rabbitmq-publisher.service.js';
 import { AiRequest } from '../../infra/ai-requests/models/ai-request.model.js';
 import type { AiRequestDocument } from '../../infra/ai-requests/types/ai-request.type.js';
@@ -63,85 +65,80 @@ export class AiRequestPublisherService {
   }
 
   private async publishPendingRequests(): Promise<void> {
+    await this.publishBatch(() => this.publishNextRequest());
+  }
+
+  private async publishPendingCancellations(): Promise<void> {
+    await this.publishBatch(() => this.publishNextCancellation());
+  }
+
+  private async publishBatch(publishNext: () => Promise<boolean>): Promise<void> {
     for (let index = 0; index < publishBatchSize; index += 1) {
-      const request = await this.claimRequestForPublishing();
+      const published = await publishNext();
 
-      if (!request) {
+      if (!published) {
         return;
-      }
-
-      try {
-        const command: AiRequestCommand = {
-          version: 1,
-          requestId: request.id,
-        };
-
-        const content = Buffer.from(JSON.stringify(command), 'utf8');
-
-        await rabbitMqPublisherService.publishToRequestQueue(
-          content,
-          request.id,
-          'studyweave.ai.request.v1',
-        );
-        await this.markRequestPublished(request.id);
-        this.brokerFailureLogged = false;
-      } catch (error: unknown) {
-        await this.releaseRequestPublishClaim(request.id);
-        throw error;
       }
     }
   }
 
-  private async publishPendingCancellations(): Promise<void> {
-    for (let index = 0; index < publishBatchSize; index += 1) {
-      const request = await this.claimCancellationForPublishing();
+  private async publishNextRequest(): Promise<boolean> {
+    const request = await this.claimRequestForPublishing();
 
-      if (!request) {
-        return;
-      }
+    if (!request) {
+      return false;
+    }
 
-      try {
-        const command: AiCancellationCommand = {
-          version: 1,
-          requestId: request.id,
-        };
+    try {
+      const command: AiRequestCommand = {
+        version: 1,
+        requestId: request.id,
+      };
 
-        const content = Buffer.from(JSON.stringify(command), 'utf8');
+      const content = Buffer.from(JSON.stringify(command), 'utf8');
 
-        await rabbitMqPublisherService.publishCancellation(
-          content,
-          request.id,
-          'studyweave.ai.cancellation.v1',
-        );
-        await AiRequest.updateOne(
-          {
-            id: request.id,
-            cancelPublishState: 'publishing',
-          },
-          {
-            $set: {
-              cancelPublishState: 'published',
-              cancelPublishLeaseUntil: null,
-              cancelPublishedAt: new Date(),
-            },
-          },
-        ).exec();
-        this.brokerFailureLogged = false;
-      } catch (error: unknown) {
-        await AiRequest.updateOne(
-          {
-            id: request.id,
-            cancelPublishState: 'publishing',
-          },
-          {
-            $set: {
-              cancelPublishState: 'pending',
-              cancelPublishLeaseUntil: null,
-            },
-          },
-        ).exec();
-        throw error;
-      }
+      await rabbitMqPublisherService.publishToRequestQueue(
+        content,
+        request.id,
+        mqEndpoints.aiRequests.messageType,
+      );
+      await this.markRequestPublished(request.id);
+      this.brokerFailureLogged = false;
+
+      return true;
+    } catch (error: unknown) {
+      await this.releaseRequestPublishClaim(request.id);
+      throw error;
+    }
+  }
+
+  private async publishNextCancellation(): Promise<boolean> {
+    const request = await this.claimCancellationForPublishing();
+
+    if (!request) {
+      return false;
+    }
+
+    try {
+      const command: AiCancellationCommand = {
+        version: 1,
+        requestId: request.id,
+      };
+
+      const content = Buffer.from(JSON.stringify(command), 'utf8');
+
+      await rabbitMqPublisherService.publishCancellation(
+        content,
+        request.id,
+        mqEndpoints.aiCancellations.messageType,
+      );
+      await this.markCancellationPublished(request.id);
+      this.brokerFailureLogged = false;
+
+      return true;
+    } catch (error: unknown) {
+      await this.releaseCancellationPublishClaim(request.id);
+      throw error;
     }
   }
 
@@ -150,32 +147,32 @@ export class AiRequestPublisherService {
 
     const leaseUntil = new Date(Date.now() + appConfig.AI_REQUEST_PUBLISH_LEASE_MS);
 
-    return AiRequest.findOneAndUpdate(
-      {
-        status: 'pending',
-        isDeleted: false,
-        $or: [
-          { queuePublishState: 'pending' },
-          {
-            queuePublishState: 'publishing',
-            queuePublishLeaseUntil: { $lte: now },
-          },
-        ],
-      },
-      {
-        $set: {
+    const availableRequestFilter: QueryFilter<AiRequestDocument> = {
+      status: 'pending',
+      isDeleted: false,
+      $or: [
+        { queuePublishState: 'pending' },
+        {
           queuePublishState: 'publishing',
-          queuePublishLeaseUntil: leaseUntil,
+          queuePublishLeaseUntil: { $lte: now },
         },
-        $inc: {
-          queuePublishAttempts: 1,
-        },
+      ],
+    };
+
+    const claimUpdate: UpdateQuery<AiRequestDocument> = {
+      $set: {
+        queuePublishState: 'publishing',
+        queuePublishLeaseUntil: leaseUntil,
       },
-      {
-        returnDocument: 'after',
-        sort: { createdAt: 1 },
+      $inc: {
+        queuePublishAttempts: 1,
       },
-    ).exec();
+    };
+
+    return AiRequest.findOneAndUpdate(availableRequestFilter, claimUpdate, {
+      returnDocument: 'after',
+      sort: { createdAt: 1 },
+    }).exec();
   }
 
   private claimCancellationForPublishing(): Promise<AiRequestDocument | null> {
@@ -183,33 +180,33 @@ export class AiRequestPublisherService {
 
     const leaseUntil = new Date(Date.now() + appConfig.AI_REQUEST_PUBLISH_LEASE_MS);
 
-    return AiRequest.findOneAndUpdate(
-      {
-        status: 'cancel_requested',
-        isDeleted: false,
-        $or: [
-          { cancelPublishState: 'pending' },
-          {
-            cancelPublishState: 'publishing',
-            cancelPublishLeaseUntil: { $lte: now },
-          },
-        ],
-      },
-      {
-        $set: {
+    const availableCancellationFilter: QueryFilter<AiRequestDocument> = {
+      status: 'cancel_requested',
+      isDeleted: false,
+      $or: [
+        { cancelPublishState: 'pending' },
+        {
           cancelPublishState: 'publishing',
-          cancelPublishLeaseUntil: leaseUntil,
+          cancelPublishLeaseUntil: { $lte: now },
         },
+      ],
+    };
+
+    const claimUpdate: UpdateQuery<AiRequestDocument> = {
+      $set: {
+        cancelPublishState: 'publishing',
+        cancelPublishLeaseUntil: leaseUntil,
       },
-      {
-        returnDocument: 'after',
-        sort: { cancelRequestedAt: 1 },
-      },
-    ).exec();
+    };
+
+    return AiRequest.findOneAndUpdate(availableCancellationFilter, claimUpdate, {
+      returnDocument: 'after',
+      sort: { cancelRequestedAt: 1 },
+    }).exec();
   }
 
   private async markRequestPublished(requestId: string): Promise<void> {
-    const result = await AiRequest.updateOne(
+    const queuedResult = await AiRequest.updateOne(
       {
         id: requestId,
         status: 'pending',
@@ -224,10 +221,14 @@ export class AiRequestPublisherService {
       },
     ).exec();
 
-    if (result.modifiedCount > 0) {
+    if (queuedResult.modifiedCount > 0) {
       return;
     }
 
+    await this.markRequestPublishedAfterConcurrentCancellation(requestId);
+  }
+
+  private async markRequestPublishedAfterConcurrentCancellation(requestId: string): Promise<void> {
     await AiRequest.updateOne(
       {
         id: requestId,
@@ -237,6 +238,22 @@ export class AiRequestPublisherService {
         $set: {
           queuePublishState: 'published',
           queuePublishLeaseUntil: null,
+        },
+      },
+    ).exec();
+  }
+
+  private async markCancellationPublished(requestId: string): Promise<void> {
+    await AiRequest.updateOne(
+      {
+        id: requestId,
+        cancelPublishState: 'publishing',
+      },
+      {
+        $set: {
+          cancelPublishState: 'published',
+          cancelPublishLeaseUntil: null,
+          cancelPublishedAt: new Date(),
         },
       },
     ).exec();
@@ -253,6 +270,21 @@ export class AiRequestPublisherService {
         $set: {
           queuePublishState: 'pending',
           queuePublishLeaseUntil: null,
+        },
+      },
+    ).exec();
+  }
+
+  private async releaseCancellationPublishClaim(requestId: string): Promise<void> {
+    await AiRequest.updateOne(
+      {
+        id: requestId,
+        cancelPublishState: 'publishing',
+      },
+      {
+        $set: {
+          cancelPublishState: 'pending',
+          cancelPublishLeaseUntil: null,
         },
       },
     ).exec();

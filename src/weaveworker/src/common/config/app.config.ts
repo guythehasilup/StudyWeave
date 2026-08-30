@@ -7,8 +7,6 @@ const envSchema = z
   .object({
     MONGODB_URI: z.string().min(1),
     RABBITMQ_URL: z.string().min(1).default('amqp://localhost:5672'),
-    AI_REQUEST_QUEUE: z.string().min(1).default('studyweave.ai.requests.v1'),
-    AI_CANCEL_EXCHANGE: z.string().min(1).default('studyweave.ai.cancellations.v1'),
     OPENAI_API_KEY: z.string().min(1),
     OPENAI_MODEL: z.string().min(1).default('gpt-5.6-terra'),
     OPENAI_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
@@ -18,6 +16,8 @@ const envSchema = z
     WEAVE_WORKER_PROCESSING_LEASE_MS: z.coerce.number().int().positive().default(120_000),
     WEAVE_WORKER_HEARTBEAT_MS: z.coerce.number().int().positive().default(30_000),
     RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5_000),
+    AI_RESULT_PUBLISH_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
+    AI_RESULT_PUBLISH_LEASE_MS: z.coerce.number().int().positive().default(30_000),
   })
   .refine(
     (environment) =>

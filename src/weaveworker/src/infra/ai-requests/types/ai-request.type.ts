@@ -43,5 +43,6 @@ export interface AiRequestDocument extends BaseModel {
   processingStartedAt: Date | null;
   processingLeaseUntil: Date | null;
   providerRequestStartedAt: Date | null;
+  lastResultEventId: string | null;
   completedAt: Date | null;
 }

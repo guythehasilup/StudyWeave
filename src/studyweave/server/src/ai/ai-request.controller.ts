@@ -17,13 +17,12 @@ export class AiRequestController extends BaseController {
 
       const result = await aiRequestLogic.create(userId, request.body);
 
-      let statusCode = StatusCodes.ACCEPTED;
-
-      if (!result.created) {
-        statusCode = StatusCodes.OK;
+      if (result.created) {
+        this.sendResponse(response, StatusCodes.ACCEPTED, result.request);
+        return;
       }
 
-      this.sendResponse(response, statusCode, result.request);
+      this.sendResponse(response, StatusCodes.OK, result.request);
     });
   };
 

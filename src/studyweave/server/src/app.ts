@@ -13,7 +13,7 @@ app.use(express.json({ limit: '16kb' }));
 
 app.use(systemRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/ai/requests', aiRequestRouter);
+app.use('/api/requests', aiRequestRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

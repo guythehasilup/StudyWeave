@@ -25,16 +25,15 @@ development.
 ## Configuration
 
 Copy `.env.example` to `.env` and replace every placeholder. StudyWeave and WeaveWorker must use
-the same MongoDB URI, RabbitMQ URL, queue name, and cancellation exchange name. The OpenAI key must
-not be added to the StudyWeave server or client environments.
+the same MongoDB URI and RabbitMQ URL. Queue and exchange names are versioned application constants
+in `common/messaging/mq-endpoints.ts`. The OpenAI key must not be added to the StudyWeave server or
+client environments.
 
 Recommended local non-secret values are:
 
 ```dotenv
 MONGODB_URI=mongodb://localhost:27017/studyweave
 RABBITMQ_URL=amqp://localhost:5672
-AI_REQUEST_QUEUE=studyweave.ai.requests.v1
-AI_CANCEL_EXCHANGE=studyweave.ai.cancellations.v1
 OPENAI_MODEL=gpt-5.6-terra
 OPENAI_TIMEOUT_MS=120000
 OPENAI_MAX_OUTPUT_TOKENS=1200
@@ -42,6 +41,8 @@ WEAVE_WORKER_CONCURRENCY=1
 WEAVE_WORKER_PROCESSING_LEASE_MS=120000
 WEAVE_WORKER_HEARTBEAT_MS=30000
 RABBITMQ_RECONNECT_DELAY_MS=5000
+AI_RESULT_PUBLISH_INTERVAL_MS=2000
+AI_RESULT_PUBLISH_LEASE_MS=30000
 ```
 
 Add `OPENAI_API_KEY` and, optionally, a unique `WEAVE_WORKER_ID` directly to the untracked `.env`.
@@ -64,7 +65,7 @@ npm run dev
 
 All endpoints require the existing JWT bearer token.
 
-1. `POST /api/ai/requests` with a client-generated UUID and a message:
+1. `POST /api/requests` with a client-generated UUID and a message:
 
    ```json
    {
@@ -73,14 +74,18 @@ All endpoints require the existing JWT bearer token.
    }
    ```
 
-2. Poll `GET /api/ai/requests/{requestId}` using the server-generated `requestId` returned by the
+2. Poll `GET /api/requests/{requestId}` using the server-generated `requestId` returned by the
    create call.
-3. Abort with `POST /api/ai/requests/{requestId}/abort`.
+3. Abort with `POST /api/requests/{requestId}/abort`.
 
-Create is idempotent per user and `clientRequestId`. The RabbitMQ message contains only the
-server-generated request ID. A worker writes a terminal MongoDB state before acknowledging the
-message. If provider delivery becomes ambiguous, the request becomes `uncertain` and is not sent
-to OpenAI again automatically.
+Create is idempotent per user and `clientRequestId`. The work command contains only the
+server-generated request ID. WeaveWorker persists a terminal outcome in its result outbox before
+acknowledging that command. It then publishes the result to the durable result queue; StudyWeave
+persists it before acknowledging the result event. If provider delivery becomes ambiguous, the
+request becomes `uncertain` and is not sent to OpenAI again automatically.
+
+Result events contain the generated response and usage metadata. Production RabbitMQ must
+therefore be private, use TLS, and grant each process only the permissions it requires.
 
 Multiple WeaveWorker instances may consume the same quorum queue. MongoDB leases prevent two
 instances from executing the same request, and a fanout exchange delivers active cancellation

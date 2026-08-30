@@ -3,6 +3,7 @@ import { BaseLogic } from '../common/logic/base.logic.js';
 import { rabbitMqConsumerService } from '../common/services/rabbitmq-consumer.service.js';
 import { AiRequest } from '../infra/ai-requests/models/ai-request.model.js';
 import type { AiRequestDocument } from '../infra/ai-requests/types/ai-request.type.js';
+import { aiResultOutboxService } from './services/ai-result-outbox.service.js';
 import { cancellationRegistryService } from './services/cancellation-registry.service.js';
 import { openAiService } from './services/openai.service.js';
 import type { QueueMessageDisposition } from './types/queue-message-handler.type.js';
@@ -30,6 +31,12 @@ export class WeaveLogic extends BaseLogic {
 
     if (!parsedCommand.success) {
       console.error('# WeaveWorker discarded an invalid request command.');
+      return 'ack';
+    }
+
+    const resultAlreadyStaged = await aiResultOutboxService.hasResult(parsedCommand.data.requestId);
+
+    if (resultAlreadyStaged) {
       return 'ack';
     }
 
@@ -107,7 +114,7 @@ export class WeaveLogic extends BaseLogic {
     }
 
     if (request.status === 'cancel_requested') {
-      await this.finalizeCancellation(requestId);
+      await this.stageCancellation(request);
       return 'ack';
     }
 
@@ -120,7 +127,7 @@ export class WeaveLogic extends BaseLogic {
         request.processingLeaseUntil !== null && request.processingLeaseUntil <= new Date();
 
       if (leaseExpired && request.providerRequestStartedAt) {
-        await this.markRecoveredRequestUncertain(requestId);
+        await this.stageRecoveredRequestUncertain(request);
         return 'ack';
       }
 
@@ -154,7 +161,7 @@ export class WeaveLogic extends BaseLogic {
       ).exec();
 
       if (providerStart.modifiedCount === 0) {
-        await this.finalizeCancellation(request.id);
+        await this.stageCancellation(request);
         return;
       }
 
@@ -171,54 +178,29 @@ export class WeaveLogic extends BaseLogic {
         controller.signal,
       );
 
-      const completedAt = new Date();
+      const cancellationRequested = await this.isCancellationRequested(request.id);
 
-      const completion = await AiRequest.updateOne(
-        {
-          id: request.id,
-          workerId: appConfig.WEAVE_WORKER_ID,
-          status: 'processing',
-          cancelRequestedAt: null,
-        },
-        {
-          $set: {
-            status: 'completed',
-            responseText: result.responseText,
-            providerResponseId: result.providerResponseId,
-            inputTokens: result.inputTokens,
-            outputTokens: result.outputTokens,
-            processingLeaseUntil: null,
-            completedAt,
-          },
-        },
-      ).exec();
-
-      if (completion.modifiedCount === 0) {
-        await this.recordProviderFailure(
-          request.id,
-          new Error('AI response could not be persisted by its lease owner.'),
-        );
+      if (cancellationRequested) {
+        await this.stageCancellation(request);
         return;
       }
 
-      console.log('@ WeaveWorker completed an AI request.', { requestId: request.id });
+      await aiResultOutboxService.stageCompleted(request, result);
+
+      console.log('@ WeaveWorker staged an AI response for delivery.', { requestId: request.id });
     } catch (error: unknown) {
-      await this.recordProviderFailure(request.id, error);
+      await this.recordProviderFailure(request, error);
     } finally {
       clearInterval(heartbeat);
       cancellationRegistryService.remove(request.id);
     }
   }
 
-  private async recordProviderFailure(requestId: string, error: unknown): Promise<void> {
-    const cancellationRequested = await AiRequest.exists({
-      id: requestId,
-      cancelRequestedAt: { $ne: null },
-      isDeleted: false,
-    });
+  private async recordProviderFailure(request: AiRequestDocument, error: unknown): Promise<void> {
+    const cancellationRequested = await this.isCancellationRequested(request.id);
 
     if (cancellationRequested) {
-      await this.finalizeCancellation(requestId);
+      await this.stageCancellation(request);
       return;
     }
 
@@ -230,24 +212,10 @@ export class WeaveLogic extends BaseLogic {
       failureCode = 'provider_rejected_request';
     }
 
-    await AiRequest.updateOne(
-      {
-        id: requestId,
-        workerId: appConfig.WEAVE_WORKER_ID,
-        status: 'processing',
-      },
-      {
-        $set: {
-          status: disposition,
-          failureCode,
-          processingLeaseUntil: null,
-          completedAt: new Date(),
-        },
-      },
-    ).exec();
+    await aiResultOutboxService.stageFailure(request, disposition, failureCode);
 
-    console.error('# WeaveWorker recorded a safe AI request failure.', {
-      requestId,
+    console.error('# WeaveWorker staged a safe AI request failure.', {
+      requestId: request.id,
       failureCode,
       providerStatus: openAiService.getStatus(error),
     });
@@ -278,42 +246,26 @@ export class WeaveLogic extends BaseLogic {
     }
   }
 
-  private async finalizeCancellation(requestId: string): Promise<void> {
-    await AiRequest.updateOne(
-      {
-        id: requestId,
-        status: { $in: ['processing', 'cancel_requested'] },
-        cancelRequestedAt: { $ne: null },
-        isDeleted: false,
-      },
-      {
-        $set: {
-          status: 'cancelled',
-          processingLeaseUntil: null,
-          completedAt: new Date(),
-        },
-      },
-    ).exec();
+  private async stageCancellation(request: AiRequestDocument): Promise<void> {
+    await aiResultOutboxService.stageCancellation(request);
   }
 
-  private async markRecoveredRequestUncertain(requestId: string): Promise<void> {
-    await AiRequest.updateOne(
-      {
-        id: requestId,
-        status: 'processing',
-        providerRequestStartedAt: { $ne: null },
-        processingLeaseUntil: { $lte: new Date() },
-        isDeleted: false,
-      },
-      {
-        $set: {
-          status: 'uncertain',
-          failureCode: 'worker_lost_after_provider_start',
-          processingLeaseUntil: null,
-          completedAt: new Date(),
-        },
-      },
-    ).exec();
+  private async stageRecoveredRequestUncertain(request: AiRequestDocument): Promise<void> {
+    await aiResultOutboxService.stageFailure(
+      request,
+      'uncertain',
+      'worker_lost_after_provider_start',
+    );
+  }
+
+  private async isCancellationRequested(requestId: string): Promise<boolean> {
+    const request = await AiRequest.exists({
+      id: requestId,
+      cancelRequestedAt: { $ne: null },
+      isDeleted: false,
+    });
+
+    return Boolean(request);
   }
 
   private createLease(): Date {

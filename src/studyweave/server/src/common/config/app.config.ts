@@ -11,8 +11,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().min(1).default('1h'),
   CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
   RABBITMQ_URL: z.string().min(1).default('amqp://localhost:5672'),
-  AI_REQUEST_QUEUE: z.string().min(1).default('studyweave.ai.requests.v1'),
-  AI_CANCEL_EXCHANGE: z.string().min(1).default('studyweave.ai.cancellations.v1'),
+  RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5_000),
   AI_REQUEST_PUBLISH_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
   AI_REQUEST_PUBLISH_LEASE_MS: z.coerce.number().int().positive().default(30_000),
 });

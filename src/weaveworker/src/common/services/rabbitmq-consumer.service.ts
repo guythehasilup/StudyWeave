@@ -1,5 +1,6 @@
 import amqp, { type Channel, type ChannelModel, type ConsumeMessage } from 'amqplib';
 import { appConfig } from '../config/app.config.js';
+import { mqEndpoints } from '../messaging/mq-endpoints.js';
 import type {
   CancellationMessageHandler,
   QueueMessageHandler,
@@ -23,7 +24,7 @@ export class RabbitMqConsumerService {
 
     connection.on('error', () => undefined);
 
-    await workChannel.assertQueue(appConfig.AI_REQUEST_QUEUE, {
+    await workChannel.assertQueue(mqEndpoints.aiRequests.queue, {
       durable: true,
       arguments: {
         'x-queue-type': 'quorum',
@@ -31,7 +32,7 @@ export class RabbitMqConsumerService {
     });
     await workChannel.prefetch(appConfig.WEAVE_WORKER_CONCURRENCY);
 
-    await cancellationChannel.assertExchange(appConfig.AI_CANCEL_EXCHANGE, 'fanout', {
+    await cancellationChannel.assertExchange(mqEndpoints.aiCancellations.exchange, 'fanout', {
       durable: true,
     });
 
@@ -41,7 +42,11 @@ export class RabbitMqConsumerService {
       durable: false,
     });
 
-    await cancellationChannel.bindQueue(cancellationQueue.queue, appConfig.AI_CANCEL_EXCHANGE, '');
+    await cancellationChannel.bindQueue(
+      cancellationQueue.queue,
+      mqEndpoints.aiCancellations.exchange,
+      '',
+    );
 
     this.connection = connection;
     this.workChannel = workChannel;
@@ -57,7 +62,7 @@ export class RabbitMqConsumerService {
       { noAck: false },
     );
     await workChannel.consume(
-      appConfig.AI_REQUEST_QUEUE,
+      mqEndpoints.aiRequests.queue,
       (message) => {
         if (message) {
           const handlerPromise = this.handleWorkMessage(message, workHandler);

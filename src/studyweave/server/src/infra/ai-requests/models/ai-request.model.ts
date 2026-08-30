@@ -109,6 +109,10 @@ const aiRequestSchema = new Schema<AiRequestDocument>(
       type: Date,
       default: null,
     },
+    lastResultEventId: {
+      type: String,
+      default: null,
+    },
     completedAt: {
       type: Date,
       default: null,
@@ -125,8 +129,13 @@ const aiRequestSchema = new Schema<AiRequestDocument>(
   },
 );
 
+// Enforces one idempotent client request identifier per user.
 aiRequestSchema.index({ userId: 1, clientRequestId: 1 }, { unique: true });
+
+// Supports request outbox scans and recovery of expired publishing leases.
 aiRequestSchema.index({ status: 1, queuePublishState: 1, queuePublishLeaseUntil: 1 });
+
+// Supports cancellation outbox scans and recovery of expired publishing leases.
 aiRequestSchema.index({ status: 1, cancelPublishState: 1, cancelPublishLeaseUntil: 1 });
 
 export const AiRequest = model<AiRequestDocument>('AiRequest', aiRequestSchema);

@@ -12,22 +12,14 @@ import type { CreateAiRequestResult } from './types/create-ai-request-result.typ
 export class AiRequestLogic extends BaseLogic {
   public create(userId: string, input: CreateAiRequestInput): Promise<CreateAiRequestResult> {
     return this.execute(async () => {
-      const existingRequest = await AiRequest.findOne({
-        userId,
-        clientRequestId: input.clientRequestId,
-        isDeleted: false,
-      }).exec();
+      const existingRequest = await this.findByClientRequestId(userId, input.clientRequestId);
 
       if (existingRequest) {
         return this.mapExistingRequest(existingRequest, input.message);
       }
 
       try {
-        const request = await AiRequest.create({
-          userId,
-          clientRequestId: input.clientRequestId,
-          message: input.message,
-        });
+        const request = await this.createRequest(userId, input);
 
         return {
           created: true,
@@ -38,11 +30,7 @@ export class AiRequestLogic extends BaseLogic {
           throw error;
         }
 
-        const duplicateRequest = await AiRequest.findOne({
-          userId,
-          clientRequestId: input.clientRequestId,
-          isDeleted: false,
-        }).exec();
+        const duplicateRequest = await this.findByClientRequestId(userId, input.clientRequestId);
 
         if (!duplicateRequest) {
           throw error;
@@ -70,25 +58,8 @@ export class AiRequestLogic extends BaseLogic {
           return aiRequestMapper.toViewModel(request);
         }
 
-        const now = new Date();
-
         if (request.status === 'pending' || request.status === 'queued') {
-          const cancelledRequest = await AiRequest.findOneAndUpdate(
-            {
-              id: requestId,
-              userId,
-              status: request.status,
-              isDeleted: false,
-            },
-            {
-              $set: {
-                status: 'cancelled',
-                cancelRequestedAt: now,
-                completedAt: now,
-              },
-            },
-            { returnDocument: 'after' },
-          ).exec();
+          const cancelledRequest = await this.cancelBeforeProcessing(request);
 
           if (cancelledRequest) {
             return aiRequestMapper.toViewModel(cancelledRequest);
@@ -98,23 +69,7 @@ export class AiRequestLogic extends BaseLogic {
         }
 
         if (request.status === 'processing') {
-          const cancellingRequest = await AiRequest.findOneAndUpdate(
-            {
-              id: requestId,
-              userId,
-              status: 'processing',
-              isDeleted: false,
-            },
-            {
-              $set: {
-                status: 'cancel_requested',
-                cancelRequestedAt: now,
-                cancelPublishState: 'pending',
-                cancelPublishLeaseUntil: null,
-              },
-            },
-            { returnDocument: 'after' },
-          ).exec();
+          const cancellingRequest = await this.requestProcessingCancellation(request);
 
           if (cancellingRequest) {
             return aiRequestMapper.toViewModel(cancellingRequest);
@@ -126,6 +81,68 @@ export class AiRequestLogic extends BaseLogic {
 
       return aiRequestMapper.toViewModel(latestRequest);
     });
+  }
+
+  private createRequest(userId: string, input: CreateAiRequestInput): Promise<AiRequestDocument> {
+    return AiRequest.create({
+      userId,
+      clientRequestId: input.clientRequestId,
+      message: input.message,
+    });
+  }
+
+  private findByClientRequestId(
+    userId: string,
+    clientRequestId: string,
+  ): Promise<AiRequestDocument | null> {
+    return AiRequest.findOne({
+      userId,
+      clientRequestId,
+      isDeleted: false,
+    }).exec();
+  }
+
+  private cancelBeforeProcessing(request: AiRequestDocument): Promise<AiRequestDocument | null> {
+    const now = new Date();
+
+    return AiRequest.findOneAndUpdate(
+      {
+        id: request.id,
+        userId: request.userId,
+        status: request.status,
+        isDeleted: false,
+      },
+      {
+        $set: {
+          status: 'cancelled',
+          cancelRequestedAt: now,
+          completedAt: now,
+        },
+      },
+      { returnDocument: 'after' },
+    ).exec();
+  }
+
+  private requestProcessingCancellation(
+    request: AiRequestDocument,
+  ): Promise<AiRequestDocument | null> {
+    return AiRequest.findOneAndUpdate(
+      {
+        id: request.id,
+        userId: request.userId,
+        status: 'processing',
+        isDeleted: false,
+      },
+      {
+        $set: {
+          status: 'cancel_requested',
+          cancelRequestedAt: new Date(),
+          cancelPublishState: 'pending',
+          cancelPublishLeaseUntil: null,
+        },
+      },
+      { returnDocument: 'after' },
+    ).exec();
   }
 
   private async findOwnedRequest(userId: string, requestId: string): Promise<AiRequestDocument> {

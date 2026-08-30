@@ -106,6 +106,10 @@ const aiRequestSchema = new Schema<AiRequestDocument>(
       type: Date,
       default: null,
     },
+    lastResultEventId: {
+      type: String,
+      default: null,
+    },
     completedAt: {
       type: Date,
       default: null,
