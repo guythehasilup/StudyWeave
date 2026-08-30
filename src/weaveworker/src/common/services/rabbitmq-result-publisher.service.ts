@@ -1,8 +1,7 @@
 import { once } from 'node:events';
+import { aiResultEventMapper, mqEndpoints, type AiResultEvent } from '@studyweave/weave-contract';
 import amqp, { type ChannelModel, type ConfirmChannel } from 'amqplib';
 import { appConfig } from '../config/app.config.js';
-import { mqEndpoints } from '../messaging/mq-endpoints.js';
-import type { AiResultEvent } from '../../weave/types/ai-result-event.type.js';
 
 export class RabbitMqResultPublisherService {
   private connection: ChannelModel | null = null;
@@ -13,7 +12,7 @@ export class RabbitMqResultPublisherService {
     try {
       const channel = await this.getChannel();
 
-      const content = Buffer.from(JSON.stringify(event), 'utf8');
+      const content = aiResultEventMapper.toBuffer(event);
 
       const accepted = channel.sendToQueue(mqEndpoints.aiResults.queue, content, {
         persistent: true,
@@ -82,12 +81,7 @@ export class RabbitMqResultPublisherService {
       }
     });
 
-    await channel.assertQueue(mqEndpoints.aiResults.queue, {
-      durable: true,
-      arguments: {
-        'x-queue-type': 'quorum',
-      },
-    });
+    await channel.assertQueue(mqEndpoints.aiResults.queue, mqEndpoints.aiResults.queueOptions);
 
     this.connection = connection;
     this.channel = channel;

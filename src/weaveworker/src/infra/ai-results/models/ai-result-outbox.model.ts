@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { aiResultOutcomes } from '@studyweave/weave-contract';
 import { Schema, model } from 'mongoose';
 import {
-  aiResultOutcomes,
   aiResultPublishStates,
   type AiResultOutboxDocument,
 } from '../types/ai-result-outbox.type.js';

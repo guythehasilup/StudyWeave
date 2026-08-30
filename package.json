@@ -1,0 +1,21 @@
+{
+  "name": "studyweave-services-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "src/Weave.CONTRACT",
+    "src/studyweave/server",
+    "src/weaveworker"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:contract": "npm run build --workspace @studyweave/weave-contract",
+    "build:server": "npm run build:contract && npm run build --workspace studyweave-server",
+    "build:worker": "npm run build:contract && npm run build --workspace studyweave-weave-worker",
+    "dev:contract": "npm run dev --workspace @studyweave/weave-contract",
+    "dev:server": "npm run build:contract && npm run dev --workspace studyweave-server",
+    "dev:worker": "npm run build:contract && npm run dev --workspace studyweave-weave-worker",
+    "format": "npm run format --workspaces --if-present",
+    "format:check": "npm run format:check --workspaces --if-present"
+  }
+}

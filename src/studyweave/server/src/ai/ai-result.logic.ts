@@ -1,7 +1,7 @@
+import type { AiResultEvent } from '@studyweave/weave-contract';
 import { BaseLogic } from '../common/logic/base.logic.js';
 import { AiRequest } from '../infra/ai-requests/models/ai-request.model.js';
 import type { AiRequestDocument } from '../infra/ai-requests/types/ai-request.type.js';
-import type { AiResultEvent } from './types/ai-result-event.type.js';
 
 export class AiResultLogic extends BaseLogic {
   public apply(event: AiResultEvent): Promise<void> {

@@ -11,6 +11,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@studyweave/weave-contract": "0.1.0",
     "amqplib": "^0.10.9",
     "argon2": "^0.45.1",
     "cors": "^2.8.6",

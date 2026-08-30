@@ -1,3 +1,4 @@
+import type { AiCancellationCommand, AiRequestCommand } from '@studyweave/weave-contract';
 import { appConfig } from '../common/config/app.config.js';
 import { BaseLogic } from '../common/logic/base.logic.js';
 import { rabbitMqConsumerService } from '../common/services/rabbitmq-consumer.service.js';
@@ -7,10 +8,6 @@ import { aiResultOutboxService } from './services/ai-result-outbox.service.js';
 import { cancellationRegistryService } from './services/cancellation-registry.service.js';
 import { openAiService } from './services/openai.service.js';
 import type { QueueMessageDisposition } from './types/queue-message-handler.type.js';
-import {
-  aiCancellationCommandSchema,
-  aiRequestCommandSchema,
-} from './validators/queue-command.schema.js';
 
 export class WeaveLogic extends BaseLogic {
   public run(): Promise<void> {
@@ -25,25 +22,18 @@ export class WeaveLogic extends BaseLogic {
   }
 
   private readonly handleRequestMessage = async (
-    content: Buffer,
+    command: AiRequestCommand,
   ): Promise<QueueMessageDisposition> => {
-    const parsedCommand = aiRequestCommandSchema.safeParse(this.parseMessage(content));
-
-    if (!parsedCommand.success) {
-      console.error('# WeaveWorker discarded an invalid request command.');
-      return 'ack';
-    }
-
-    const resultAlreadyStaged = await aiResultOutboxService.hasResult(parsedCommand.data.requestId);
+    const resultAlreadyStaged = await aiResultOutboxService.hasResult(command.requestId);
 
     if (resultAlreadyStaged) {
       return 'ack';
     }
 
-    const request = await this.claimRequest(parsedCommand.data.requestId);
+    const request = await this.claimRequest(command.requestId);
 
     if (!request) {
-      return this.resolveUnclaimedRequest(parsedCommand.data.requestId);
+      return this.resolveUnclaimedRequest(command.requestId);
     }
 
     await this.processClaimedRequest(request);
@@ -51,19 +41,14 @@ export class WeaveLogic extends BaseLogic {
     return 'ack';
   };
 
-  private readonly handleCancellationMessage = async (content: Buffer): Promise<void> => {
-    const parsedCommand = aiCancellationCommandSchema.safeParse(this.parseMessage(content));
-
-    if (!parsedCommand.success) {
-      console.error('# WeaveWorker discarded an invalid cancellation command.');
-      return;
-    }
-
-    const aborted = cancellationRegistryService.abort(parsedCommand.data.requestId);
+  private readonly handleCancellationMessage = async (
+    command: AiCancellationCommand,
+  ): Promise<void> => {
+    const aborted = cancellationRegistryService.abort(command.requestId);
 
     if (aborted) {
       console.log('@ WeaveWorker interrupted an active AI request.', {
-        requestId: parsedCommand.data.requestId,
+        requestId: command.requestId,
       });
     }
   };
@@ -286,14 +271,6 @@ export class WeaveLogic extends BaseLogic {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, delay);
     });
-  }
-
-  private parseMessage(content: Buffer): unknown {
-    try {
-      return JSON.parse(content.toString('utf8')) as unknown;
-    } catch {
-      return null;
-    }
   }
 }
 

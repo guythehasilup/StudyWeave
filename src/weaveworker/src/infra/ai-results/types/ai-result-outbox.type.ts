@@ -1,10 +1,7 @@
+import type { AiResultOutcome } from '@studyweave/weave-contract';
 import type { BaseModel } from '../../../common/models/base.model.js';
 
-export const aiResultOutcomes = ['completed', 'failed', 'uncertain', 'cancelled'] as const;
-
 export const aiResultPublishStates = ['pending', 'publishing', 'published'] as const;
-
-export type AiResultOutcome = (typeof aiResultOutcomes)[number];
 
 export type AiResultPublishState = (typeof aiResultPublishStates)[number];
 

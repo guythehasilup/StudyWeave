@@ -1,10 +1,9 @@
+import { aiCancellationCommandMapper, aiRequestCommandMapper } from '@studyweave/weave-contract';
 import type { QueryFilter, UpdateQuery } from 'mongoose';
 import { appConfig } from '../../common/config/app.config.js';
-import { mqEndpoints } from '../../common/messaging/mq-endpoints.js';
 import { rabbitMqPublisherService } from '../../common/services/rabbitmq-publisher.service.js';
 import { AiRequest } from '../../infra/ai-requests/models/ai-request.model.js';
 import type { AiRequestDocument } from '../../infra/ai-requests/types/ai-request.type.js';
-import type { AiCancellationCommand, AiRequestCommand } from '../types/ai-request-command.type.js';
 
 const publishBatchSize = 25;
 
@@ -90,18 +89,11 @@ export class AiRequestPublisherService {
     }
 
     try {
-      const command: AiRequestCommand = {
-        version: 1,
-        requestId: request.id,
-      };
+      const command = aiRequestCommandMapper.create(request.id);
 
-      const content = Buffer.from(JSON.stringify(command), 'utf8');
+      const content = aiRequestCommandMapper.toBuffer(command);
 
-      await rabbitMqPublisherService.publishToRequestQueue(
-        content,
-        request.id,
-        mqEndpoints.aiRequests.messageType,
-      );
+      await rabbitMqPublisherService.publishToRequestQueue(content, request.id);
       await this.markRequestPublished(request.id);
       this.brokerFailureLogged = false;
 
@@ -120,18 +112,11 @@ export class AiRequestPublisherService {
     }
 
     try {
-      const command: AiCancellationCommand = {
-        version: 1,
-        requestId: request.id,
-      };
+      const command = aiCancellationCommandMapper.create(request.id);
 
-      const content = Buffer.from(JSON.stringify(command), 'utf8');
+      const content = aiCancellationCommandMapper.toBuffer(command);
 
-      await rabbitMqPublisherService.publishCancellation(
-        content,
-        request.id,
-        mqEndpoints.aiCancellations.messageType,
-      );
+      await rabbitMqPublisherService.publishCancellation(content, request.id);
       await this.markCancellationPublished(request.id);
       this.brokerFailureLogged = false;
 

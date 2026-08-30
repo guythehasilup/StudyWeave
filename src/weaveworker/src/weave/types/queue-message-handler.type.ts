@@ -1,5 +1,7 @@
+import type { AiCancellationCommand, AiRequestCommand } from '@studyweave/weave-contract';
+
 export type QueueMessageDisposition = 'ack' | 'requeue';
 
-export type QueueMessageHandler = (content: Buffer) => Promise<QueueMessageDisposition>;
+export type QueueMessageHandler = (command: AiRequestCommand) => Promise<QueueMessageDisposition>;
 
-export type CancellationMessageHandler = (content: Buffer) => Promise<void>;
+export type CancellationMessageHandler = (command: AiCancellationCommand) => Promise<void>;

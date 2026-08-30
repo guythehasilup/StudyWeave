@@ -1,4 +1,4 @@
-import type { AiResultOutcome } from '../../infra/ai-results/types/ai-result-outbox.type.js';
+import type { AiResultOutcome } from '@studyweave/weave-contract';
 
 export interface StageAiResultInput {
   requestId: string;

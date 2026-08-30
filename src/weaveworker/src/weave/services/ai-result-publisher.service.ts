@@ -3,7 +3,7 @@ import { appConfig } from '../../common/config/app.config.js';
 import { rabbitMqResultPublisherService } from '../../common/services/rabbitmq-result-publisher.service.js';
 import { AiResultOutbox } from '../../infra/ai-results/models/ai-result-outbox.model.js';
 import type { AiResultOutboxDocument } from '../../infra/ai-results/types/ai-result-outbox.type.js';
-import type { AiResultEvent } from '../types/ai-result-event.type.js';
+import { aiResultOutboxMapper } from '../mappers/ai-result-outbox.mapper.js';
 
 const publishBatchSize = 25;
 
@@ -76,7 +76,7 @@ export class AiResultPublisherService {
     }
 
     try {
-      await rabbitMqResultPublisherService.publishResult(this.toEvent(result));
+      await rabbitMqResultPublisherService.publishResult(aiResultOutboxMapper.toEvent(result));
       await this.markResultPublished(result.id);
       this.brokerFailureLogged = false;
 
@@ -148,23 +148,6 @@ export class AiResultPublisherService {
         },
       },
     ).exec();
-  }
-
-  private toEvent(result: AiResultOutboxDocument): AiResultEvent {
-    return {
-      version: 1,
-      eventId: result.id,
-      requestId: result.requestId,
-      workerId: result.workerId,
-      workerAttempt: result.workerAttempt,
-      outcome: result.outcome,
-      responseText: result.responseText,
-      providerResponseId: result.providerResponseId,
-      inputTokens: result.inputTokens,
-      outputTokens: result.outputTokens,
-      failureCode: result.failureCode,
-      completedAt: result.completedAt.toISOString(),
-    };
   }
 }
 

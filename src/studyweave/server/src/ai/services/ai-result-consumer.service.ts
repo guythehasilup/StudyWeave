@@ -1,12 +1,13 @@
+import { aiResultEventMapper, mqEndpoints } from '@studyweave/weave-contract';
 import amqp, { type Channel, type ChannelModel, type ConsumeMessage } from 'amqplib';
 import { appConfig } from '../../common/config/app.config.js';
-import { mqEndpoints } from '../../common/messaging/mq-endpoints.js';
+import { rabbitMqQuarantinePublisherService } from '../../common/services/rabbitmq-quarantine-publisher.service.js';
 import { aiResultLogic } from '../ai-result.logic.js';
-import { aiResultEventSchema } from '../validators/ai-result-event.schema.js';
 
 export class AiResultConsumerService {
   private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
+  private consumerTag: string | null = null;
   private loopPromise: Promise<void> | null = null;
   private readonly activeHandlers = new Set<Promise<void>>();
   private running = false;
@@ -23,14 +24,15 @@ export class AiResultConsumerService {
 
   public async stop(): Promise<void> {
     this.running = false;
+    await this.cancelConsumer();
+    await Promise.allSettled(this.activeHandlers);
+    await rabbitMqQuarantinePublisherService.close();
     await this.closeConnection();
 
     if (this.loopPromise) {
       await this.loopPromise;
       this.loopPromise = null;
     }
-
-    await Promise.allSettled(this.activeHandlers);
   }
 
   private async runLoop(): Promise<void> {
@@ -54,59 +56,84 @@ export class AiResultConsumerService {
   private async consumeResults(): Promise<void> {
     const connection = await amqp.connect(appConfig.RABBITMQ_URL);
 
-    const channel = await connection.createChannel();
-
-    connection.on('error', () => undefined);
-
-    await channel.assertQueue(mqEndpoints.aiResults.queue, {
-      durable: true,
-      arguments: {
-        'x-queue-type': 'quorum',
-      },
-    });
-    await channel.prefetch(10);
-
-    this.connection = connection;
-    this.channel = channel;
-
-    await channel.consume(
-      mqEndpoints.aiResults.queue,
-      (message) => {
-        if (message) {
-          const handlerPromise = this.handleResultMessage(message, channel);
-
-          this.activeHandlers.add(handlerPromise);
-          void handlerPromise.finally(() => {
-            this.activeHandlers.delete(handlerPromise);
-          });
-        }
-      },
-      { noAck: false },
-    );
-
-    console.log('@ StudyWeave is consuming WeaveWorker results.');
-
-    await new Promise<void>((resolve) => {
+    const connectionClosed = new Promise<void>((resolve) => {
       connection.once('close', resolve);
     });
 
-    if (this.connection === connection) {
-      this.connection = null;
-      this.channel = null;
+    connection.on('error', () => undefined);
+
+    try {
+      const channel = await connection.createChannel();
+
+      if (!this.running) {
+        await channel.close().catch(() => undefined);
+        await connection.close().catch(() => undefined);
+        return;
+      }
+
+      this.connection = connection;
+      this.channel = channel;
+
+      await channel.assertQueue(mqEndpoints.aiResults.queue, mqEndpoints.aiResults.queueOptions);
+      await channel.prefetch(10);
+
+      if (!this.running) {
+        await this.closeConnection();
+        return;
+      }
+
+      const consumer = await channel.consume(
+        mqEndpoints.aiResults.queue,
+        (message) => {
+          if (message) {
+            const handlerPromise = this.handleResultMessage(message, channel);
+
+            this.activeHandlers.add(handlerPromise);
+            void handlerPromise.finally(() => {
+              this.activeHandlers.delete(handlerPromise);
+            });
+          }
+        },
+        { noAck: false },
+      );
+
+      this.consumerTag = consumer.consumerTag;
+
+      console.log('@ StudyWeave is consuming WeaveWorker results.');
+
+      await connectionClosed;
+    } catch (error: unknown) {
+      if (this.connection === connection) {
+        await this.closeConnection();
+      } else {
+        await connection.close().catch(() => undefined);
+      }
+
+      throw error;
+    } finally {
+      if (this.connection === connection) {
+        this.connection = null;
+        this.channel = null;
+        this.consumerTag = null;
+      }
     }
   }
 
   private async handleResultMessage(message: ConsumeMessage, channel: Channel): Promise<void> {
-    const event = aiResultEventSchema.safeParse(this.parseMessage(message.content));
+    if (message.properties.type !== mqEndpoints.aiResults.messageType) {
+      await this.quarantineMessage(channel, message, 'invalid_result_message_type');
+      return;
+    }
 
-    if (!event.success) {
-      console.error('# StudyWeave discarded an invalid AI result event.');
-      this.acknowledgeMessage(channel, message);
+    const event = aiResultEventMapper.fromBuffer(message.content);
+
+    if (!event) {
+      await this.quarantineMessage(channel, message, 'invalid_result_body');
       return;
     }
 
     try {
-      await aiResultLogic.apply(event.data);
+      await aiResultLogic.apply(event);
       this.acknowledgeMessage(channel, message);
     } catch {
       console.error('# StudyWeave could not persist an AI result; delivery will be retried.');
@@ -121,6 +148,7 @@ export class AiResultConsumerService {
 
     this.channel = null;
     this.connection = null;
+    this.consumerTag = null;
 
     if (channel) {
       await channel.close().catch(() => undefined);
@@ -128,6 +156,34 @@ export class AiResultConsumerService {
 
     if (connection) {
       await connection.close().catch(() => undefined);
+    }
+  }
+
+  private async quarantineMessage(
+    channel: Channel,
+    message: ConsumeMessage,
+    reason: string,
+  ): Promise<void> {
+    try {
+      await rabbitMqQuarantinePublisherService.publish(message, reason);
+      this.acknowledgeMessage(channel, message);
+
+      console.error('# StudyWeave quarantined an invalid AI result message.', { reason });
+    } catch {
+      console.error('# StudyWeave could not quarantine an invalid result; delivery will retry.');
+      this.rejectMessage(channel, message);
+    }
+  }
+
+  private async cancelConsumer(): Promise<void> {
+    const channel = this.channel;
+
+    const consumerTag = this.consumerTag;
+
+    this.consumerTag = null;
+
+    if (channel && consumerTag) {
+      await channel.cancel(consumerTag).catch(() => undefined);
     }
   }
 
@@ -151,14 +207,6 @@ export class AiResultConsumerService {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, appConfig.RABBITMQ_RECONNECT_DELAY_MS);
     });
-  }
-
-  private parseMessage(content: Buffer): unknown {
-    try {
-      return JSON.parse(content.toString('utf8')) as unknown;
-    } catch {
-      return null;
-    }
   }
 }
 

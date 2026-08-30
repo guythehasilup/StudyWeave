@@ -1,25 +1,21 @@
 import { once } from 'node:events';
+import { mqEndpoints } from '@studyweave/weave-contract';
 import amqp, { type ChannelModel, type ConfirmChannel } from 'amqplib';
 import { appConfig } from '../config/app.config.js';
-import { mqEndpoints } from '../messaging/mq-endpoints.js';
 
 export class RabbitMqPublisherService {
   private connection: ChannelModel | null = null;
   private channel: ConfirmChannel | null = null;
   private connectionPromise: Promise<ConfirmChannel> | null = null;
 
-  public async publishToRequestQueue(
-    content: Buffer,
-    messageId: string,
-    messageType: string,
-  ): Promise<void> {
+  public async publishToRequestQueue(content: Buffer, messageId: string): Promise<void> {
     await this.publish(async (channel) => {
       const accepted = channel.sendToQueue(mqEndpoints.aiRequests.queue, content, {
         persistent: true,
         contentType: 'application/json',
         contentEncoding: 'utf-8',
         messageId,
-        type: messageType,
+        type: mqEndpoints.aiRequests.messageType,
         timestamp: Date.now(),
       });
 
@@ -29,18 +25,14 @@ export class RabbitMqPublisherService {
     });
   }
 
-  public async publishCancellation(
-    content: Buffer,
-    messageId: string,
-    messageType: string,
-  ): Promise<void> {
+  public async publishCancellation(content: Buffer, messageId: string): Promise<void> {
     await this.publish(async (channel) => {
       const accepted = channel.publish(mqEndpoints.aiCancellations.exchange, '', content, {
         persistent: true,
         contentType: 'application/json',
         contentEncoding: 'utf-8',
         messageId,
-        type: messageType,
+        type: mqEndpoints.aiCancellations.messageType,
         timestamp: Date.now(),
       });
 
@@ -109,15 +101,12 @@ export class RabbitMqPublisherService {
       }
     });
 
-    await channel.assertQueue(mqEndpoints.aiRequests.queue, {
-      durable: true,
-      arguments: {
-        'x-queue-type': 'quorum',
-      },
-    });
-    await channel.assertExchange(mqEndpoints.aiCancellations.exchange, 'fanout', {
-      durable: true,
-    });
+    await channel.assertQueue(mqEndpoints.aiRequests.queue, mqEndpoints.aiRequests.queueOptions);
+    await channel.assertExchange(
+      mqEndpoints.aiCancellations.exchange,
+      mqEndpoints.aiCancellations.exchangeType,
+      mqEndpoints.aiCancellations.exchangeOptions,
+    );
 
     this.connection = connection;
     this.channel = channel;

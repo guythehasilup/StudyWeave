@@ -25,9 +25,9 @@ development.
 ## Configuration
 
 Copy `.env.example` to `.env` and replace every placeholder. StudyWeave and WeaveWorker must use
-the same MongoDB URI and RabbitMQ URL. Queue and exchange names are versioned application constants
-in `common/messaging/mq-endpoints.ts`. The OpenAI key must not be added to the StudyWeave server or
-client environments.
+the same MongoDB URI and RabbitMQ URL. Queue names, exchange names, topology, message types,
+validators, and serializers are versioned in the shared `src/Weave.CONTRACT` package. The OpenAI
+key must not be added to the StudyWeave server or client environments.
 
 Recommended local non-secret values are:
 
@@ -49,17 +49,28 @@ Add `OPENAI_API_KEY` and, optionally, a unique `WEAVE_WORKER_ID` directly to the
 
 ## Run locally
 
-In separate terminals:
+On the first setup, install the contract, server, and worker workspaces together:
 
 ```powershell
-cd C:\studyweave\StudyWeave\src\studyweave\server
-npm run dev
+cd C:\studyweave\StudyWeave
+npm install
+npm run build
+```
+
+Then run the processes from the repository root in separate terminals:
+
+```powershell
+cd C:\studyweave\StudyWeave
+npm run dev:server
 ```
 
 ```powershell
-cd C:\studyweave\StudyWeave\src\weaveworker
-npm run dev
+cd C:\studyweave\StudyWeave
+npm run dev:worker
 ```
+
+If `Weave.CONTRACT` is being edited, also run `npm run dev:contract` in a third terminal. The client
+remains an independent package and keeps its existing install and run commands.
 
 ## Authenticated API flow
 
@@ -86,6 +97,10 @@ request becomes `uncertain` and is not sent to OpenAI again automatically.
 
 Result events contain the generated response and usage metadata. Production RabbitMQ must
 therefore be private, use TLS, and grant each process only the permissions it requires.
+
+Messages with an invalid versioned type or body are copied to the durable
+`studyweave.ai.quarantine.v1` quorum queue with publisher confirms before the original delivery is
+acknowledged. If quarantine publication fails, the original message remains eligible for retry.
 
 Multiple WeaveWorker instances may consume the same quorum queue. MongoDB leases prevent two
 instances from executing the same request, and a fanout exchange delivers active cancellation
