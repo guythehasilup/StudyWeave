@@ -8,7 +8,17 @@ export const he = {
     authenticationRequired: 'נדרשת התחברות כדי לבצע פעולה זו.',
     usernameTaken: 'שם המשתמש כבר נמצא בשימוש.',
   },
+  ai: {
+    requestNotFound: 'בקשת הבינה המלאכותית לא נמצאה.',
+    clientRequestConflict: 'מזהה הבקשה כבר שייך להודעה אחרת.',
+    failed: 'לא הצלחנו לקבל תשובה. נסו שוב בבקשה חדשה.',
+    uncertain: 'לא ניתן לאשר אם הבקשה הושלמה. הבקשה לא תישלח שוב אוטומטית.',
+  },
   validation: {
+    invalidParams: 'הפרמטרים שנשלחו אינם תקינים.',
+    aiRequestIdInvalid: 'מזהה הבקשה חייב להיות UUID תקין.',
+    aiMessageRequired: 'יש להזין הודעה.',
+    aiMessageLength: 'אורך ההודעה חייב להיות עד 8,000 תווים.',
     invalidBody: 'הנתונים שנשלחו אינם תקינים.',
     usernameRequired: 'יש להזין שם משתמש.',
     usernameInvalid:

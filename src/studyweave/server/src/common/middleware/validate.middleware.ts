@@ -19,3 +19,20 @@ export const validateBody =
     request.body = result.data;
     next();
   };
+
+export const validateParams =
+  (schema: ZodType): RequestHandler =>
+  (request: Request, response: Response, next: NextFunction): void => {
+    const result = schema.safeParse(request.params);
+
+    if (!result.success) {
+      response.status(StatusCodes.BAD_REQUEST).json({
+        message: he.validation.invalidParams,
+        errors: result.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    request.params = result.data as typeof request.params;
+    next();
+  };

@@ -1,31 +1,27 @@
 {
-  "name": "studyweave-server",
+  "name": "studyweave-weave-worker",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "format": "prettier --ignore-path ../../../.prettierignore --write .",
-    "format:check": "prettier --ignore-path ../../../.prettierignore --check .",
+    "format": "prettier --ignore-path ../../.prettierignore --write .",
+    "format:check": "prettier --ignore-path ../../.prettierignore --check .",
     "start": "node dist/index.js"
   },
   "dependencies": {
     "amqplib": "^0.10.9",
-    "argon2": "^0.45.1",
-    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "latest",
-    "http-status-codes": "^2.3.0",
-    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.3",
+    "openai": "latest",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.7",
-    "@types/cors": "^2.8.19",
-    "@types/express": "latest",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "latest",
     "prettier": "^3.9.6",
     "tsx": "latest",
