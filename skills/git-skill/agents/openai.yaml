@@ -1,0 +1,12 @@
+interface:
+  display_name: Write Git Change Names
+  short_description: Standardize branches, PRs, and commits
+  default_prompt: Use $write-git-change-names to propose a branch name, PR title,
+    and commit message for this change.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
