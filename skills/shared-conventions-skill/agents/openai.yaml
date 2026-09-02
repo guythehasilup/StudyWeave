@@ -1,0 +1,14 @@
+interface:
+  display_name: Shared Full-Stack Conventions
+  short_description: Apply shared TypeScript and i18n rules
+  default_prompt: Use $apply-shared-code-conventions to apply the shared coding, documentation,
+    and localization rules.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

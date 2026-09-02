@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "test": "tsx --test src/modules/auth/auth.service.test.ts",
     "format": "prettier --ignore-path ../../../.prettierignore --write .",
     "format:check": "prettier --ignore-path ../../../.prettierignore --check .",
     "start": "node dist/index.js"
@@ -17,7 +18,7 @@
     "express": "latest",
     "http-status-codes": "^2.3.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.9.3",
+    "mongodb": "^7.5.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
