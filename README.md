@@ -4,7 +4,8 @@ StudyWeave is a planned study workspace that turns each academic question into a
 
 A student submits the original question and their attempted solution, receives structured AI feedback, asks follow-up questions in the same workspace, and can later search and reopen the complete conversation.
 
-> **Project status:** Planning and API design. Application code has not been implemented yet.
+> **Project status:** The React and Express authentication foundation is implemented. The
+> study-workspace capabilities in the OpenAPI document remain planned.
 
 ## Core workflow
 
@@ -28,13 +29,20 @@ A student submits the original question and their attempted solution, receives s
 
 | Area | Direction |
 |---|---|
-| Frontend | React, TypeScript, Vite |
-| Backend | ASP.NET Core Web API |
-| Database | MongoDB |
+| Frontend | React, TypeScript, Vite, Material UI, React Hook Form, TanStack Query |
+| Backend | Express and TypeScript |
+| Database | MongoDB through the official Node.js driver |
 | API contract | OpenAPI 3.0 |
 | AI integration | Provider abstraction with structured initial output |
 
 These are current design decisions and can still change before implementation.
+
+## Local applications
+
+The runnable applications live in `src/studyweave/client` and `src/studyweave/server`. Each has
+its own package scripts for development, formatting, tests, and production builds. The server
+requires `MONGODB_URI` and a JWT secret of at least 32 characters in `JWT_SECRET`; the remaining
+settings have development defaults in `src/studyweave/server/src/config/environment.ts`.
 
 ## Roadmap
 

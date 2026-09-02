@@ -1,0 +1,14 @@
+interface:
+  display_name: React MUI Frontend Conventions
+  short_description: Build consistent React and MUI frontends
+  default_prompt: Use $build-react-mui-apps with $apply-shared-code-conventions to
+    design or implement this React and MUI frontend.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

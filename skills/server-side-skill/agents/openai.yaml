@@ -1,0 +1,15 @@
+interface:
+  display_name: Express Microservice Conventions
+  short_description: Build Express services with MongoDB driver
+  default_prompt: Use $build-express-microservices with $apply-shared-code-conventions
+    to design or implement this Express microservice backend with the official MongoDB
+    Node.js driver.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

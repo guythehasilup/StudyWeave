@@ -1,17 +1,44 @@
 import cors from 'cors';
 import express from 'express';
-import { authRouter } from './auth/auth.routes.js';
-import { appConfig } from './common/config/app.config.js';
-import { errorHandler, notFoundHandler } from './common/middleware/error.middleware.js';
-import { systemRouter } from './system/system.routes.js';
+import type { Router } from 'express';
+import { createErrorHandler, notFoundHandler } from './common/http/error.middleware.js';
+import { requestContextMiddleware } from './common/http/request-context.middleware.js';
+import type { AppConfig } from './config/environment.js';
+import { createSystemRouter } from './modules/system/system.routes.js';
 
-export const app = express();
+/**
+ * Collect the validated configuration and feature adapters composed by Express.
+ *
+ * @example
+ * const dependencies: ApplicationDependencies = { config, authRouter };
+ */
+export type ApplicationDependencies = Readonly<{
+  config: AppConfig;
+  authRouter: Router;
+}>;
 
-app.use(cors({ origin: appConfig.CLIENT_ORIGIN }));
-app.use(express.json({ limit: '16kb' }));
+/**
+ * Compose the HTTP application without starting external resources or a listener.
+ *
+ * @param dependencies - Validated configuration and the authentication router.
+ * @returns A configured Express application suitable for tests or startup.
+ * @example
+ * const app = createApplication({ config, authRouter });
+ */
+export const createApplication = ({
+  config,
+  authRouter,
+}: ApplicationDependencies): express.Express => {
+  const app = express();
 
-app.use(systemRouter);
-app.use('/api/auth', authRouter);
+  app.disable('x-powered-by');
+  app.use(requestContextMiddleware);
+  app.use(cors({ origin: config.clientOrigin }));
+  app.use(express.json({ limit: '16kb' }));
+  app.use(createSystemRouter());
+  app.use('/api/auth', authRouter);
+  app.use(notFoundHandler);
+  app.use(createErrorHandler(config));
 
-app.use(notFoundHandler);
-app.use(errorHandler);
+  return app;
+};

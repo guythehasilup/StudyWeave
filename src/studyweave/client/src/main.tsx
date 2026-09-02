@@ -1,22 +1,18 @@
-import { CacheProvider } from '@emotion/react';
-import { CssBaseline, ThemeProvider } from '@mui/material';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.component';
-import { RouterProvider } from './common/routing/providers/Router.provider';
-import './common/styles/global.css';
-import { rtlCache } from './common/theme/rtl-cache.config';
-import { theme } from './common/theme/app.theme';
+import App from './App';
+import { AppProviders } from './app/AppProviders';
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+
+if (rootElement === null) {
+  throw new Error('APPLICATION_ROOT_MISSING');
+}
+
+createRoot(rootElement).render(
   <StrictMode>
-    <CacheProvider value={rtlCache}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <RouterProvider>
-          <App />
-        </RouterProvider>
-      </ThemeProvider>
-    </CacheProvider>
+    <AppProviders>
+      <App />
+    </AppProviders>
   </StrictMode>,
 );

@@ -6,8 +6,8 @@ info:
     Initial API contract for StudyWeave, a study workspace that stores questions,
     student attempts, structured AI feedback, and persistent follow-up conversations.
 servers:
-  - url: https://localhost:5001/api
-    description: Local ASP.NET Core API
+  - url: http://localhost:3000/api
+    description: Local Express API
 tags:
   - name: Users
   - name: Courses
