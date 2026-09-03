@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
+import { AuthenticatedRoute } from './app/router/AuthenticatedRoute';
 import { fallbackRoute, routes } from './app/router/routes';
 import { useRouter } from './app/router/useRouter';
 import { useTranslate } from './shared/localization/useTranslate';
@@ -23,7 +24,13 @@ const App = (): ReactElement => {
     document.title = `${pageTitle} | ${productName}`;
   }, [pageTitle, productName]);
 
-  return <Page />;
+  return activeRoute.isProtected ? (
+    <AuthenticatedRoute>
+      <Page />
+    </AuthenticatedRoute>
+  ) : (
+    <Page />
+  );
 };
 
 export default App;

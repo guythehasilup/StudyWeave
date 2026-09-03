@@ -2,6 +2,7 @@ import { MongoClient } from 'mongodb';
 import type { Collection } from 'mongodb';
 import type { AppConfig } from '../../config/environment.js';
 import type { UserDocument } from '../../modules/users/user.document.js';
+import type { QuestionDocument } from '../../modules/questions/question.document.js';
 
 /**
  * Hold the single MongoDB client and typed service-owned collections.
@@ -12,6 +13,7 @@ import type { UserDocument } from '../../modules/users/user.document.js';
 export type MongoContext = Readonly<{
   client: MongoClient;
   users: Collection<UserDocument>;
+  questions: Collection<QuestionDocument>;
 }>;
 
 /**
@@ -33,8 +35,9 @@ export const createMongoContext = async (config: AppConfig): Promise<MongoContex
 
   const database = client.db(config.mongodbDatabase);
   const users = database.collection<UserDocument>('users');
+  const questions = database.collection<QuestionDocument>('questions');
 
-  return { client, users };
+  return { client, users, questions };
 };
 
 /**

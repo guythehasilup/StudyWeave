@@ -6,6 +6,7 @@ import { useTranslate } from '../../../shared/localization/useTranslate';
 import { AuthLayout } from '../../../shared/ui/AuthLayout';
 import { SwForm } from '../../../shared/ui/SwForm';
 import { NavigationLink } from '../../../app/router/NavigationLink';
+import { useRouter } from '../../../app/router/useRouter';
 import { normalizeUsername, validatePassword, validateUsername } from '../auth-validation';
 import type { LoginFormValues } from '../auth.types';
 import { PasswordField } from '../components/PasswordField';
@@ -22,6 +23,7 @@ const LOGIN_DEFAULT_VALUES: LoginFormValues = { username: '', password: '' };
  */
 export const LoginPage = (): ReactElement => {
   const { translate } = useTranslate();
+  const { navigate } = useRouter();
   const loginMutation = useLoginMutation();
   const form = useForm<LoginFormValues>({
     defaultValues: LOGIN_DEFAULT_VALUES,
@@ -44,6 +46,7 @@ export const LoginPage = (): ReactElement => {
         password: values.password,
       });
       form.reset(LOGIN_DEFAULT_VALUES);
+      navigate('/questions', { replace: true });
     } catch {
       form.setFocus('username');
     }

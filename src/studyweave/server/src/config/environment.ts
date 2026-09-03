@@ -13,6 +13,9 @@ const environmentSchema = z.object({
   JWT_AUDIENCE: z.string().min(1).default('studyweave-client'),
   JWT_EXPIRES_IN: z.string().min(1).default('1h'),
   CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
+  RABBITMQ_URL: z.string().min(1).default('amqp://guest:guest@localhost:5672'),
+  RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(4),
+  RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 });
 
@@ -34,6 +37,9 @@ export type AppConfig = Readonly<{
   jwtAudience: string;
   jwtExpiresIn: string;
   clientOrigin: string;
+  rabbitmqUrl: string;
+  rabbitmqPrefetch: number;
+  rabbitmqPublishConfirmTimeoutMs: number;
   shutdownTimeoutMs: number;
 }>;
 
@@ -61,6 +67,9 @@ export const loadAppConfig = (environment: NodeJS.ProcessEnv = process.env): App
     jwtAudience: parsed.JWT_AUDIENCE,
     jwtExpiresIn: parsed.JWT_EXPIRES_IN,
     clientOrigin: parsed.CLIENT_ORIGIN,
+    rabbitmqUrl: parsed.RABBITMQ_URL,
+    rabbitmqPrefetch: parsed.RABBITMQ_PREFETCH,
+    rabbitmqPublishConfirmTimeoutMs: parsed.RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_MS,
     shutdownTimeoutMs: parsed.SHUTDOWN_TIMEOUT_MS,
   };
 };

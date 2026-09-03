@@ -5,7 +5,15 @@
  * const code: ApiErrorCode = 'INVALID_CREDENTIALS';
  */
 export type ApiErrorCode =
-  'INTERNAL_ERROR' | 'INVALID_CREDENTIALS' | 'NOT_FOUND' | 'USERNAME_TAKEN' | 'VALIDATION_FAILED';
+  | 'AUTHENTICATION_REQUIRED'
+  | 'INTERNAL_ERROR'
+  | 'INVALID_CREDENTIALS'
+  | 'NOT_FOUND'
+  | 'QUESTION_CANCELLATION_FAILED'
+  | 'QUESTION_DISPATCH_FAILED'
+  | 'QUESTION_NOT_FOUND'
+  | 'USERNAME_TAKEN'
+  | 'VALIDATION_FAILED';
 
 /**
  * Enumerate localization keys that clients may translate for API failures.
@@ -15,9 +23,13 @@ export type ApiErrorCode =
  */
 export type ApiResourceKey =
   | 'auth.errors.invalidCredentials'
+  | 'auth.errors.authenticationRequired'
   | 'auth.errors.usernameTaken'
   | 'common.errors.internal'
   | 'common.errors.notFound'
+  | 'questions.errors.cancellationFailed'
+  | 'questions.errors.dispatchFailed'
+  | 'questions.errors.notFound'
   | 'validation.errors.invalidBody';
 
 /**

@@ -1,0 +1,35 @@
+{
+  "name": "@studyweave/swwai-contract",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test src/messaging/question-messages.test.ts",
+    "format": "prettier --ignore-path ../../../.prettierignore --write .",
+    "format:check": "prettier --ignore-path ../../../.prettierignore --check .",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.7",
+    "@types/node": "latest",
+    "prettier": "^3.9.6",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

@@ -2,6 +2,7 @@ import { Alert, Button, CircularProgress, TextField, Typography } from '@mui/mat
 import { Controller, useForm } from 'react-hook-form';
 import type { ReactElement } from 'react';
 import { NavigationLink } from '../../../app/router/NavigationLink';
+import { useRouter } from '../../../app/router/useRouter';
 import type { ResourceKey } from '../../../shared/localization/resources';
 import { useTranslate } from '../../../shared/localization/useTranslate';
 import { AuthLayout } from '../../../shared/ui/AuthLayout';
@@ -31,6 +32,7 @@ const REGISTER_DEFAULT_VALUES: RegisterFormValues = {
  */
 export const RegisterPage = (): ReactElement => {
   const { translate } = useTranslate();
+  const { navigate } = useRouter();
   const registerMutation = useRegisterMutation();
   const form = useForm<RegisterFormValues>({
     defaultValues: REGISTER_DEFAULT_VALUES,
@@ -54,6 +56,7 @@ export const RegisterPage = (): ReactElement => {
         displayName: values.displayName.trim(),
       });
       form.reset(REGISTER_DEFAULT_VALUES);
+      navigate('/questions', { replace: true });
     } catch {
       form.setFocus('username');
     }
