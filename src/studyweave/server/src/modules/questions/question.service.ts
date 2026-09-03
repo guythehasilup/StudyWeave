@@ -3,6 +3,7 @@ import {
   QUESTION_STATUSES,
   createMessageEnvelope,
   isActiveQuestionStatus,
+  logError,
 } from '@studyweave/swwai-contract';
 import type {
   QuestionContent,
@@ -12,7 +13,6 @@ import type {
 } from '@studyweave/swwai-contract';
 import { StatusCodes } from 'http-status-codes';
 import { ApiError } from '../../common/errors/api-error.js';
-import { logError } from '../../common/logging/error-logger.js';
 import type { QuestionRepository } from './question.repository.js';
 
 /**

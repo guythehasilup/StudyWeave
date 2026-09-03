@@ -1,4 +1,8 @@
-import { QUESTION_MESSAGE_TYPES, createMessageEnvelope } from '@studyweave/swwai-contract';
+import {
+  QUESTION_MESSAGE_TYPES,
+  createMessageEnvelope,
+  logError,
+} from '@studyweave/swwai-contract';
 import type {
   QuestionAnswerRequestedMessage,
   QuestionCancellationRequestedMessage,
@@ -109,11 +113,10 @@ export const createQuestionProcessor = ({
           return;
         }
 
-        console.error('AI answer generation failed', {
+        logError('AI answer generation failed', generation.error, {
           questionId,
           userId,
           correlationId: message.correlationId,
-          errorName: generation.error instanceof Error ? generation.error.name : 'UnknownError',
         });
         await publishEvent(
           createMessageEnvelope(

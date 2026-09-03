@@ -2,8 +2,10 @@ import {
   AI_RABBITMQ_TOPOLOGY,
   QUESTION_MESSAGE_ROUTES,
   WORKER_REQUESTS_SUBSCRIPTION,
+  configureErrorStackTraces,
   createRabbitMqClient,
   createWorkerCancellationSubscription,
+  logError,
   questionAnswerRequestedMessageSchema,
   questionCancellationRequestedMessageSchema,
 } from '@studyweave/swwai-contract';
@@ -86,9 +88,9 @@ const startWorker = async (): Promise<void> => {
   }
 };
 
+configureErrorStackTraces();
+
 void startWorker().catch((error: unknown) => {
-  console.error('Failed to start weaveworker', {
-    errorName: error instanceof Error ? error.name : 'UnknownError',
-  });
+  logError('Failed to start weaveworker', error);
   process.exitCode = 1;
 });

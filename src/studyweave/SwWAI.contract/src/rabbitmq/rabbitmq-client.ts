@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import { connect } from 'amqplib';
 import type { Channel, ChannelModel, ConfirmChannel, ConsumeMessage } from 'amqplib';
 import type { ZodType } from 'zod';
+import { logError } from '../logging/error-logger.js';
 import type { MessageEnvelope } from '../messaging/message-envelope.js';
 import type {
   RabbitMqPublishRoute,
@@ -237,10 +238,9 @@ export const createRabbitMqClient = async (
             await handler(message);
             channel.ack(delivery);
           } catch (error: unknown) {
-            console.error('RabbitMQ delivery failed and was dead-lettered', {
+            logError('RabbitMQ delivery failed and was dead-lettered', error, {
               queue: assertedQueue.queue,
               messageId: delivery.properties.messageId,
-              errorName: error instanceof Error ? error.name : 'UnknownError',
             });
             channel.nack(delivery, false, false);
           }

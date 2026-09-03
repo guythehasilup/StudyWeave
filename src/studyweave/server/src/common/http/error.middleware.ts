@@ -1,9 +1,9 @@
+import { logError } from '@studyweave/swwai-contract';
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import type { AppConfig } from '../../config/environment.js';
 import { ApiError } from '../errors/api-error.js';
 import type { ApiErrorCode, ApiResourceKey } from '../errors/api-error.js';
-import { logError } from '../logging/error-logger.js';
 
 /**
  * Describe the client-safe error response returned by every failed request.

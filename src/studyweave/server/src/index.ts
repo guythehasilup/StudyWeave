@@ -3,12 +3,13 @@ import {
   AI_RABBITMQ_TOPOLOGY,
   QUESTION_MESSAGE_ROUTES,
   SERVER_EVENTS_SUBSCRIPTION,
+  configureErrorStackTraces,
   createRabbitMqClient,
+  logError,
   questionWorkerEventSchema,
 } from '@studyweave/swwai-contract';
 import type { QuestionMessage } from '@studyweave/swwai-contract';
 import { createApplication } from './app.js';
-import { logError } from './common/logging/error-logger.js';
 import { loadAppConfig } from './config/environment.js';
 import { closeMongoContext, createMongoContext } from './infrastructure/mongodb/mongo-context.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
@@ -128,6 +129,8 @@ const startServer = async (): Promise<void> => {
     throw error;
   }
 };
+
+configureErrorStackTraces();
 
 void startServer().catch((error: unknown) => {
   logError('Failed to start the StudyWeave server', error);
