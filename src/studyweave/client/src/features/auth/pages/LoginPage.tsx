@@ -6,6 +6,7 @@ import { useTranslate } from '../../../shared/localization/useTranslate';
 import { AuthLayout } from '../../../shared/ui/AuthLayout';
 import { SwForm } from '../../../shared/ui/SwForm';
 import { NavigationLink } from '../../../app/router/NavigationLink';
+import { DEFAULT_PROTECTED_ROUTE_PATH, ROUTE_PATHS } from '../../../app/router/route-paths';
 import { useRouter } from '../../../app/router/useRouter';
 import { normalizeUsername, validatePassword, validateUsername } from '../auth-validation';
 import type { LoginFormValues } from '../auth.types';
@@ -46,7 +47,7 @@ export const LoginPage = (): ReactElement => {
         password: values.password,
       });
       form.reset(LOGIN_DEFAULT_VALUES);
-      navigate('/questions', { replace: true });
+      navigate(DEFAULT_PROTECTED_ROUTE_PATH, { replace: true });
     } catch {
       form.setFocus('username');
     }
@@ -59,7 +60,9 @@ export const LoginPage = (): ReactElement => {
       footer={
         <Typography color="text.secondary" sx={{ lineHeight: 1.75 }}>
           {translate('login.links.noAccount')}{' '}
-          <NavigationLink to="/register">{translate('login.links.register')}</NavigationLink>
+          <NavigationLink to={ROUTE_PATHS.register}>
+            {translate('login.links.register')}
+          </NavigationLink>
         </Typography>
       }
     >

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { getAccessToken } from '../../features/auth/api/token-storage';
+import { getProtectedRouteRedirect } from './route-redirects';
 import { useRouter } from './useRouter';
 
 /**
@@ -23,11 +24,11 @@ export type AuthenticatedRouteProps = Readonly<{
  */
 export const AuthenticatedRoute = ({ children }: AuthenticatedRouteProps): ReactElement | null => {
   const { navigate } = useRouter();
-  const isAuthenticated = getAccessToken() !== null;
+  const redirectPath = getProtectedRouteRedirect(getAccessToken() !== null);
 
   useEffect(() => {
-    if (!isAuthenticated) navigate('/login', { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (redirectPath !== null) navigate(redirectPath, { replace: true });
+  }, [navigate, redirectPath]);
 
-  return isAuthenticated ? <>{children}</> : null;
+  return redirectPath === null ? <>{children}</> : null;
 };

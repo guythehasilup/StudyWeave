@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { AuthenticatedRoute } from './app/router/AuthenticatedRoute';
-import { fallbackRoute, routes } from './app/router/routes';
+import { FallbackRoute } from './app/router/FallbackRoute';
+import { GuestOnlyRoute } from './app/router/GuestOnlyRoute';
+import { protectedRoutes, unprotectedRoutes } from './app/router/routes';
 import { useRouter } from './app/router/useRouter';
 import { useTranslate } from './shared/localization/useTranslate';
 
@@ -15,21 +17,33 @@ import { useTranslate } from './shared/localization/useTranslate';
 const App = (): ReactElement => {
   const { pathname } = useRouter();
   const { translate } = useTranslate();
-  const activeRoute = routes.find((route) => route.path === pathname) ?? fallbackRoute;
-  const Page = activeRoute.component;
-  const pageTitle = translate(activeRoute.titleKey);
+  const protectedRoute = protectedRoutes.find((route) => route.path === pathname);
+  const unprotectedRoute = unprotectedRoutes.find((route) => route.path === pathname);
+  const activeRoute = protectedRoute ?? unprotectedRoute;
   const productName = translate('common.productName');
+  const documentTitle =
+    activeRoute === undefined ? productName : `${translate(activeRoute.titleKey)} | ${productName}`;
 
   useEffect(() => {
-    document.title = `${pageTitle} | ${productName}`;
-  }, [pageTitle, productName]);
+    document.title = documentTitle;
+  }, [documentTitle]);
 
-  return activeRoute.isProtected ? (
-    <AuthenticatedRoute>
+  if (activeRoute === undefined) return <FallbackRoute />;
+
+  const Page = activeRoute.component;
+
+  if (protectedRoute !== undefined) {
+    return (
+      <AuthenticatedRoute>
+        <Page />
+      </AuthenticatedRoute>
+    );
+  }
+
+  return (
+    <GuestOnlyRoute>
       <Page />
-    </AuthenticatedRoute>
-  ) : (
-    <Page />
+    </GuestOnlyRoute>
   );
 };
 

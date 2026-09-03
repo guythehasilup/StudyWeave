@@ -2,6 +2,7 @@ import { Alert, Button, CircularProgress, TextField, Typography } from '@mui/mat
 import { Controller, useForm } from 'react-hook-form';
 import type { ReactElement } from 'react';
 import { NavigationLink } from '../../../app/router/NavigationLink';
+import { DEFAULT_PROTECTED_ROUTE_PATH, ROUTE_PATHS } from '../../../app/router/route-paths';
 import { useRouter } from '../../../app/router/useRouter';
 import type { ResourceKey } from '../../../shared/localization/resources';
 import { useTranslate } from '../../../shared/localization/useTranslate';
@@ -56,7 +57,7 @@ export const RegisterPage = (): ReactElement => {
         displayName: values.displayName.trim(),
       });
       form.reset(REGISTER_DEFAULT_VALUES);
-      navigate('/questions', { replace: true });
+      navigate(DEFAULT_PROTECTED_ROUTE_PATH, { replace: true });
     } catch {
       form.setFocus('username');
     }
@@ -69,7 +70,9 @@ export const RegisterPage = (): ReactElement => {
       footer={
         <Typography color="text.secondary" sx={{ lineHeight: 1.75 }}>
           {translate('register.links.hasAccount')}{' '}
-          <NavigationLink to="/login">{translate('register.links.login')}</NavigationLink>
+          <NavigationLink to={ROUTE_PATHS.login}>
+            {translate('register.links.login')}
+          </NavigationLink>
         </Typography>
       }
     >
