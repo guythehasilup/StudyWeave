@@ -8,6 +8,7 @@ import {
 } from '@studyweave/swwai-contract';
 import type { QuestionMessage } from '@studyweave/swwai-contract';
 import { createApplication } from './app.js';
+import { logError } from './common/logging/error-logger.js';
 import { loadAppConfig } from './config/environment.js';
 import { closeMongoContext, createMongoContext } from './infrastructure/mongodb/mongo-context.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
@@ -129,8 +130,6 @@ const startServer = async (): Promise<void> => {
 };
 
 void startServer().catch((error: unknown) => {
-  console.error('Failed to start the StudyWeave server', {
-    errorName: error instanceof Error ? error.name : 'UnknownError',
-  });
+  logError('Failed to start the StudyWeave server', error);
   process.exitCode = 1;
 });

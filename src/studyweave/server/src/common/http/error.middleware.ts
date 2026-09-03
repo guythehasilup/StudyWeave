@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import type { AppConfig } from '../../config/environment.js';
 import { ApiError } from '../errors/api-error.js';
 import type { ApiErrorCode, ApiResourceKey } from '../errors/api-error.js';
+import { logError } from '../logging/error-logger.js';
 
 /**
  * Describe the client-safe error response returned by every failed request.
@@ -76,9 +77,11 @@ export const createErrorHandler =
     }
 
     if (config.nodeEnv !== 'test') {
-      console.error('Unexpected server error', {
+      logError('Unexpected server error', error, {
         correlationId,
-        errorName: error instanceof Error ? error.name : 'UnknownError',
+        method: request.method,
+        path: request.originalUrl,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
 

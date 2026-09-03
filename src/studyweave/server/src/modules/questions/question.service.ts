@@ -12,6 +12,7 @@ import type {
 } from '@studyweave/swwai-contract';
 import { StatusCodes } from 'http-status-codes';
 import { ApiError } from '../../common/errors/api-error.js';
+import { logError } from '../../common/logging/error-logger.js';
 import type { QuestionRepository } from './question.repository.js';
 
 /**
@@ -105,11 +106,10 @@ export const createQuestionService = ({
       await publishMessage(message);
     } catch (error: unknown) {
       await questions.markDispatchFailed(question.id, userId);
-      console.error('Question command publication failed', {
+      logError('Question command publication failed', error, {
         questionId: question.id,
         userId,
         correlationId,
-        errorName: error instanceof Error ? error.name : 'UnknownError',
       });
       throw new ApiError(
         StatusCodes.SERVICE_UNAVAILABLE,
@@ -165,11 +165,10 @@ export const createQuestionService = ({
     try {
       await publishMessage(message);
     } catch (error: unknown) {
-      console.error('Question cancellation publication failed', {
+      logError('Question cancellation publication failed', error, {
         questionId,
         userId,
         correlationId,
-        errorName: error instanceof Error ? error.name : 'UnknownError',
       });
       throw new ApiError(
         StatusCodes.SERVICE_UNAVAILABLE,
