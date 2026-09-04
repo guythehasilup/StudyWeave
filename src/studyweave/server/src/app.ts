@@ -15,6 +15,7 @@ import { createSystemRouter } from './modules/system/system.routes.js';
 export type ApplicationDependencies = Readonly<{
   config: AppConfig;
   authRouter: Router;
+  questionRouter: Router;
 }>;
 
 /**
@@ -28,6 +29,7 @@ export type ApplicationDependencies = Readonly<{
 export const createApplication = ({
   config,
   authRouter,
+  questionRouter,
 }: ApplicationDependencies): express.Express => {
   const app = express();
 
@@ -37,6 +39,7 @@ export const createApplication = ({
   app.use(express.json({ limit: '16kb' }));
   app.use(createSystemRouter());
   app.use('/api/auth', authRouter);
+  app.use('/api/questions', questionRouter);
   app.use(notFoundHandler);
   app.use(createErrorHandler(config));
 

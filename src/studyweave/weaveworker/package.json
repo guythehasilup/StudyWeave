@@ -1,0 +1,27 @@
+{
+  "name": "studyweave-weaveworker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build:contract": "npm --prefix ../SwWAI.contract run build",
+    "build": "npm run build:contract && tsc",
+    "test": "tsx --test src/questions/question-processor.test.ts src/rate-limiting/rate-limit-gate.test.ts",
+    "format": "prettier --ignore-path ../../../.prettierignore --write .",
+    "format:check": "prettier --ignore-path ../../../.prettierignore --check .",
+    "start": "node --enable-source-maps dist/index.js"
+  },
+  "dependencies": {
+    "@studyweave/swwai-contract": "file:../SwWAI.contract",
+    "dotenv": "^17.4.2",
+    "openai": "^7.8.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "prettier": "^3.9.6",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

@@ -236,7 +236,7 @@ paths:
                 $ref: '#/components/schemas/PagedQuestions'
     post:
       tags: [Questions]
-      summary: Save a question and request its initial AI analysis
+      summary: Queue a question for an asynchronous AI answer
       operationId: createQuestion
       requestBody:
         required: true
@@ -245,35 +245,29 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateQuestionRequest'
       responses:
-        '201':
-          description: Question saved and analyzed
+        '202':
+          description: Question saved and accepted for asynchronous processing
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StudyQuestion'
+                $ref: '#/components/schemas/AsyncQuestion'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '422':
-          description: The question could not be analyzed
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
 
   /questions/{questionId}:
     parameters:
       - $ref: '#/components/parameters/QuestionId'
     get:
       tags: [Questions]
-      summary: Open a saved question with its analysis and conversation
+      summary: Poll the latest asynchronous question state
       operationId: getQuestion
       responses:
         '200':
-          description: Full question workspace
+          description: Latest owner-scoped question state
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StudyQuestion'
+                $ref: '#/components/schemas/AsyncQuestion'
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
@@ -283,6 +277,23 @@ paths:
       responses:
         '204':
           description: Question deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /questions/{questionId}/cancellations:
+    parameters:
+      - $ref: '#/components/parameters/QuestionId'
+    post:
+      tags: [Questions]
+      summary: Request best-effort cancellation of an active AI answer
+      operationId: cancelQuestion
+      responses:
+        '202':
+          description: Cancellation accepted or the current terminal state returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncQuestion'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -506,27 +517,59 @@ components:
 
     CreateQuestionRequest:
       type: object
-      required: [courseId, title, questionText]
+      required: [content]
       properties:
-        courseId:
-          type: string
-          format: uuid
-        topicId:
-          type: string
-          format: uuid
-          nullable: true
-        title:
-          type: string
-          example: Find the interval of convergence
-        questionText:
-          type: string
-        studentAttempt:
-          type: string
-          nullable: true
-        attachments:
+        content:
+          $ref: '#/components/schemas/QuestionContent'
+
+    QuestionContent:
+      type: object
+      required: [parts]
+      properties:
+        parts:
           type: array
+          minItems: 1
+          maxItems: 20
           items:
-            $ref: '#/components/schemas/Attachment'
+            $ref: '#/components/schemas/QuestionContentPart'
+
+    QuestionContentPart:
+      oneOf:
+        - type: object
+          required: [type, text]
+          properties:
+            type:
+              type: string
+              enum: [text]
+            text:
+              type: string
+              minLength: 1
+              maxLength: 20000
+
+    AsyncQuestion:
+      type: object
+      required: [id, content, status, answer, errorCode, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          $ref: '#/components/schemas/QuestionContent'
+        status:
+          type: string
+          enum: [queued, processing, cancellation_requested, completed, failed, cancelled]
+        answer:
+          type: string
+          nullable: true
+        errorCode:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     StudyQuestion:
       allOf:

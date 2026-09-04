@@ -64,6 +64,8 @@ Example:
 feat/auth/add-refresh-token-rotation
 ```
 
+Upon branch creation, make sure the new branch is based on the latest `main` branch and that the branch name is unique in the repository.
+
 ### PR title and commit message
 
 Use exactly:

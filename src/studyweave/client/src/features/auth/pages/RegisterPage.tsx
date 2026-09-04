@@ -1,11 +1,14 @@
-import { Alert, Button, CircularProgress, TextField, Typography } from '@mui/material';
+import { Alert, Button, CircularProgress, Typography } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import type { ReactElement } from 'react';
 import { NavigationLink } from '../../../app/router/NavigationLink';
+import { DEFAULT_PROTECTED_ROUTE_PATH, ROUTE_PATHS } from '../../../app/router/route-paths';
+import { useRouter } from '../../../app/router/useRouter';
 import type { ResourceKey } from '../../../shared/localization/resources';
 import { useTranslate } from '../../../shared/localization/useTranslate';
 import { AuthLayout } from '../../../shared/ui/AuthLayout';
 import { SwForm } from '../../../shared/ui/SwForm';
+import { SwTextField } from '../../../shared/ui/SwTextField';
 import {
   normalizeUsername,
   validateDisplayName,
@@ -31,6 +34,7 @@ const REGISTER_DEFAULT_VALUES: RegisterFormValues = {
  */
 export const RegisterPage = (): ReactElement => {
   const { translate } = useTranslate();
+  const { navigate } = useRouter();
   const registerMutation = useRegisterMutation();
   const form = useForm<RegisterFormValues>({
     defaultValues: REGISTER_DEFAULT_VALUES,
@@ -45,8 +49,6 @@ export const RegisterPage = (): ReactElement => {
    * await handleSubmit({ username: 'student', password: 'secure-passphrase', displayName: 'Student' });
    */
   const handleSubmit = async (values: RegisterFormValues): Promise<void> => {
-    registerMutation.reset();
-
     try {
       await registerMutation.mutateAsync({
         username: normalizeUsername(values.username),
@@ -54,6 +56,7 @@ export const RegisterPage = (): ReactElement => {
         displayName: values.displayName.trim(),
       });
       form.reset(REGISTER_DEFAULT_VALUES);
+      navigate(DEFAULT_PROTECTED_ROUTE_PATH, { replace: true });
     } catch {
       form.setFocus('username');
     }
@@ -66,7 +69,9 @@ export const RegisterPage = (): ReactElement => {
       footer={
         <Typography color="text.secondary" sx={{ lineHeight: 1.75 }}>
           {translate('register.links.hasAccount')}{' '}
-          <NavigationLink to="/login">{translate('register.links.login')}</NavigationLink>
+          <NavigationLink to={ROUTE_PATHS.login}>
+            {translate('register.links.login')}
+          </NavigationLink>
         </Typography>
       }
     >
@@ -79,7 +84,7 @@ export const RegisterPage = (): ReactElement => {
             const errorMessage = fieldState.error?.message as ResourceKey | undefined;
 
             return (
-              <TextField
+              <SwTextField
                 name={field.name}
                 value={field.value}
                 onChange={(event) => {
@@ -94,7 +99,6 @@ export const RegisterPage = (): ReactElement => {
                 helperText={errorMessage === undefined ? undefined : translate(errorMessage)}
                 disabled={registerMutation.isPending}
                 required
-                fullWidth
               />
             );
           }}
@@ -107,7 +111,7 @@ export const RegisterPage = (): ReactElement => {
             const errorMessage = fieldState.error?.message as ResourceKey | undefined;
 
             return (
-              <TextField
+              <SwTextField
                 name={field.name}
                 value={field.value}
                 onChange={(event) => {
@@ -122,7 +126,6 @@ export const RegisterPage = (): ReactElement => {
                 helperText={errorMessage === undefined ? undefined : translate(errorMessage)}
                 disabled={registerMutation.isPending}
                 required
-                fullWidth
               />
             );
           }}

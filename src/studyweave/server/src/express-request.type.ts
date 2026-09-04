@@ -18,6 +18,11 @@ declare global {
      */
     interface Request {
       context?: RequestContext;
+      /** Authenticated access-token identity populated by protected routes. */
+      identity?: Readonly<{
+        userId: string;
+        username: string;
+      }>;
     }
   }
 }

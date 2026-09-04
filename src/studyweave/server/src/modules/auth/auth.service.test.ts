@@ -38,6 +38,7 @@ const createDependencies = (overrides: Partial<UserRepository> = {}): AuthServic
   },
   tokens: {
     createAccessToken: () => 'access-token',
+    verifyAccessToken: () => null,
   },
 });
 

@@ -21,6 +21,7 @@ export type AccessTokenIdentity = Readonly<{
  */
 export type TokenService = Readonly<{
   createAccessToken: (identity: AccessTokenIdentity) => string;
+  verifyAccessToken: (accessToken: string) => AccessTokenIdentity | null;
 }>;
 
 /**
@@ -53,5 +54,31 @@ export const createTokenService = (config: AppConfig): TokenService => {
       subject: identity.userId,
     });
 
-  return { createAccessToken };
+  /**
+   * Verify and narrow an untrusted bearer token to application identity.
+   *
+   * @param accessToken - Encoded bearer token received from an HTTP request.
+   * @returns Validated user identity, or `null` for an invalid or expired token.
+   * @example
+   * const identity = verifyAccessToken(requestToken);
+   */
+  const verifyAccessToken = (accessToken: string): AccessTokenIdentity | null => {
+    try {
+      const payload = jwt.verify(accessToken, config.jwtSecret, {
+        algorithms: ['HS256'],
+        issuer: config.jwtIssuer,
+        audience: config.jwtAudience,
+      });
+
+      return typeof payload !== 'string' &&
+        typeof payload.sub === 'string' &&
+        typeof payload.username === 'string'
+        ? { userId: payload.sub, username: payload.username }
+        : null;
+    } catch {
+      return null;
+    }
+  };
+
+  return { createAccessToken, verifyAccessToken };
 };
