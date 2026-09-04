@@ -1,9 +1,10 @@
 import VisibilityOffOutlined from '@mui/icons-material/VisibilityOffOutlined';
 import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
-import { IconButton, InputAdornment, TextField } from '@mui/material';
+import { IconButton, InputAdornment } from '@mui/material';
 import { useState } from 'react';
 import type { HTMLInputAutoCompleteAttribute, ReactElement, Ref } from 'react';
 import { useTranslate } from '../../../shared/localization/useTranslate';
+import { SwTextField } from '../../../shared/ui/SwTextField';
 
 /**
  * Configure a password field controlled by React Hook Form.
@@ -26,17 +27,17 @@ import { useTranslate } from '../../../shared/localization/useTranslate';
  *   inputRef,
  * };
  */
-export type PasswordFieldProps = Readonly<{
-  label: string;
-  autoComplete: HTMLInputAutoCompleteAttribute;
-  name: string;
-  value: string;
-  onChange: (value: string) => void;
-  onBlur: () => void;
-  inputRef: Ref<HTMLInputElement>;
-  errorMessage?: string;
-  isDisabled?: boolean;
-}>;
+export interface PasswordFieldProps {
+  readonly label: string;
+  readonly autoComplete: HTMLInputAutoCompleteAttribute;
+  readonly name: string;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly onBlur: () => void;
+  readonly inputRef: Ref<HTMLInputElement>;
+  readonly errorMessage?: string;
+  readonly isDisabled?: boolean;
+}
 
 /**
  * Render an accessible password input with a localized visibility control.
@@ -72,7 +73,7 @@ export const PasswordField = ({
   );
 
   return (
-    <TextField
+    <SwTextField
       name={name}
       value={value}
       onChange={(event) => onChange(event.target.value)}
@@ -85,7 +86,6 @@ export const PasswordField = ({
       helperText={errorMessage}
       disabled={isDisabled}
       required
-      fullWidth
       slotProps={{
         input: {
           endAdornment: (

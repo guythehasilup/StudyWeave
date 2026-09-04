@@ -12,6 +12,8 @@ export const ENGLISH_RESOURCES = {
   'questions.errors.dispatchFailed': 'The question could not be queued. Please try again.',
   'questions.errors.invalidResponse': 'The server returned an invalid question response.',
   'questions.errors.notFound': 'This question was not found.',
+  'questions.errors.rateLimitExceeded':
+    'Too many questions were sent in a short time. Please wait and try again.',
   'questions.errors.requestFailed':
     'The question request could not be completed. Please try again.',
   'questions.fields.placeholder': 'Type your question here…',
@@ -86,6 +88,7 @@ export const HEBREW_RESOURCES: Readonly<Record<ResourceKey, string>> = {
   'questions.errors.dispatchFailed': 'לא הצלחנו להעביר את השאלה לתור. אפשר לנסות שוב.',
   'questions.errors.invalidResponse': 'השרת החזיר תשובת שאלה לא תקינה.',
   'questions.errors.notFound': 'השאלה לא נמצאה.',
+  'questions.errors.rateLimitExceeded': 'נשלחו יותר מדי שאלות בזמן קצר. המתינו מעט ונסו שוב.',
   'questions.errors.requestFailed': 'לא הצלחנו להשלים את בקשת השאלה. אפשר לנסות שוב.',
   'questions.fields.placeholder': 'כתבו כאן את השאלה שלכם…',
   'questions.fields.question': 'שאלה',

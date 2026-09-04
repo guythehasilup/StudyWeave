@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
+/** Shared tracing fields inherited by message envelopes and creation contexts. */
+export interface CorrelationContext {
+  readonly correlationId: string;
+  readonly causationId?: string;
+}
+
 /**
  * Wrap a versioned application message with tracing and delivery metadata.
  *
@@ -15,15 +21,13 @@ import { z } from 'zod';
  *   payload: { id },
  * };
  */
-export type MessageEnvelope<TType extends string, TPayload> = Readonly<{
-  messageId: string;
-  type: TType;
-  version: 1;
-  occurredAt: string;
-  correlationId: string;
-  causationId?: string;
-  payload: Readonly<TPayload>;
-}>;
+export interface MessageEnvelope<TType extends string, TPayload> extends CorrelationContext {
+  readonly messageId: string;
+  readonly type: TType;
+  readonly version: 1;
+  readonly occurredAt: string;
+  readonly payload: Readonly<TPayload>;
+}
 
 /**
  * Supply tracing values when creating a versioned message envelope.
@@ -34,12 +38,10 @@ export type MessageEnvelope<TType extends string, TPayload> = Readonly<{
  * @example
  * const context: CreateMessageContext = { correlationId: requestId };
  */
-export type CreateMessageContext = Readonly<{
-  correlationId: string;
-  causationId?: string;
-  messageId?: string;
-  occurredAt?: Date;
-}>;
+export interface CreateMessageContext extends CorrelationContext {
+  readonly messageId?: string;
+  readonly occurredAt?: Date;
+}
 
 /**
  * Create an immutable version-one message envelope.

@@ -1,4 +1,5 @@
 import type { ResourceKey } from '../../../shared/localization/resources';
+import { isAuthUserDto } from '../auth.types';
 import type { AuthSessionDto, LoginInput, RegisterInput } from '../auth.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -68,17 +69,7 @@ const isAuthSessionDto = (value: unknown): value is AuthSessionDto => {
     return false;
   }
 
-  const { user } = value;
-
-  return (
-    typeof user.id === 'string' &&
-    typeof user.username === 'string' &&
-    typeof user.displayName === 'string' &&
-    typeof user.isActive === 'boolean' &&
-    (user.lastLoginAt === null || typeof user.lastLoginAt === 'string') &&
-    typeof user.createdAt === 'string' &&
-    typeof user.updatedAt === 'string'
-  );
+  return isAuthUserDto(value.user);
 };
 
 /**

@@ -1,4 +1,4 @@
-import { Alert, Button, CircularProgress, TextField, Typography } from '@mui/material';
+import { Alert, Button, CircularProgress, Typography } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import type { ReactElement } from 'react';
 import { NavigationLink } from '../../../app/router/NavigationLink';
@@ -8,6 +8,7 @@ import type { ResourceKey } from '../../../shared/localization/resources';
 import { useTranslate } from '../../../shared/localization/useTranslate';
 import { AuthLayout } from '../../../shared/ui/AuthLayout';
 import { SwForm } from '../../../shared/ui/SwForm';
+import { SwTextField } from '../../../shared/ui/SwTextField';
 import {
   normalizeUsername,
   validateDisplayName,
@@ -48,8 +49,6 @@ export const RegisterPage = (): ReactElement => {
    * await handleSubmit({ username: 'student', password: 'secure-passphrase', displayName: 'Student' });
    */
   const handleSubmit = async (values: RegisterFormValues): Promise<void> => {
-    registerMutation.reset();
-
     try {
       await registerMutation.mutateAsync({
         username: normalizeUsername(values.username),
@@ -85,7 +84,7 @@ export const RegisterPage = (): ReactElement => {
             const errorMessage = fieldState.error?.message as ResourceKey | undefined;
 
             return (
-              <TextField
+              <SwTextField
                 name={field.name}
                 value={field.value}
                 onChange={(event) => {
@@ -100,7 +99,6 @@ export const RegisterPage = (): ReactElement => {
                 helperText={errorMessage === undefined ? undefined : translate(errorMessage)}
                 disabled={registerMutation.isPending}
                 required
-                fullWidth
               />
             );
           }}
@@ -113,7 +111,7 @@ export const RegisterPage = (): ReactElement => {
             const errorMessage = fieldState.error?.message as ResourceKey | undefined;
 
             return (
-              <TextField
+              <SwTextField
                 name={field.name}
                 value={field.value}
                 onChange={(event) => {
@@ -128,7 +126,6 @@ export const RegisterPage = (): ReactElement => {
                 helperText={errorMessage === undefined ? undefined : translate(errorMessage)}
                 disabled={registerMutation.isPending}
                 required
-                fullWidth
               />
             );
           }}

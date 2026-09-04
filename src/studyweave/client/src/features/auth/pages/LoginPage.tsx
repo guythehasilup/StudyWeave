@@ -1,10 +1,11 @@
-import { Alert, Button, CircularProgress, TextField, Typography } from '@mui/material';
+import { Alert, Button, CircularProgress, Typography } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import type { ReactElement } from 'react';
 import type { ResourceKey } from '../../../shared/localization/resources';
 import { useTranslate } from '../../../shared/localization/useTranslate';
 import { AuthLayout } from '../../../shared/ui/AuthLayout';
 import { SwForm } from '../../../shared/ui/SwForm';
+import { SwTextField } from '../../../shared/ui/SwTextField';
 import { NavigationLink } from '../../../app/router/NavigationLink';
 import { DEFAULT_PROTECTED_ROUTE_PATH, ROUTE_PATHS } from '../../../app/router/route-paths';
 import { useRouter } from '../../../app/router/useRouter';
@@ -39,8 +40,6 @@ export const LoginPage = (): ReactElement => {
    * await handleSubmit({ username: 'student', password: 'secure-passphrase' });
    */
   const handleSubmit = async (values: LoginFormValues): Promise<void> => {
-    loginMutation.reset();
-
     try {
       await loginMutation.mutateAsync({
         username: normalizeUsername(values.username),
@@ -75,7 +74,7 @@ export const LoginPage = (): ReactElement => {
             const errorMessage = fieldState.error?.message as ResourceKey | undefined;
 
             return (
-              <TextField
+              <SwTextField
                 name={field.name}
                 value={field.value}
                 onChange={(event) => {
@@ -90,7 +89,6 @@ export const LoginPage = (): ReactElement => {
                 helperText={errorMessage === undefined ? undefined : translate(errorMessage)}
                 disabled={loginMutation.isPending}
                 required
-                fullWidth
               />
             );
           }}

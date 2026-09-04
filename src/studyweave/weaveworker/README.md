@@ -14,3 +14,8 @@ result events. It does not expose HTTP routes or write the server's question col
 Cancellation is best effort. Every worker replica receives cancellation broadcasts and aborts a
 matching request when that request is running in its process. A cancellation received before the
 request is held briefly so queue ordering does not make the stop action ineffective.
+
+`OPENAI_RATE_LIMIT_MAX_REQUESTS` and `OPENAI_RATE_LIMIT_WINDOW_MS` limit provider request starts per
+worker process. Deliveries wait without being acknowledged when the quota is exhausted, so they are
+not discarded and cancellation remains abortable. When multiple worker replicas run, allocate the
+provider quota across replicas or replace the injected limiter with a distributed implementation.

@@ -1,23 +1,15 @@
-import {
-  QUESTION_MESSAGE_TYPES,
-  createMessageEnvelope,
-  logError,
-} from '@studyweave/swwai-contract';
+import { QUESTION_MESSAGE_TYPES, createMessageEnvelope } from '@studyweave/swwai-contract';
 import type {
+  ErrorLogger,
   QuestionAnswerRequestedMessage,
   QuestionCancellationRequestedMessage,
-  QuestionWorkerEvent,
 } from '@studyweave/swwai-contract';
 import type { AnswerGenerator } from './answer-generator.js';
 import type { CancellationRegistry } from './cancellation-registry.js';
-
-/**
- * Publish worker-authored status and result events.
- *
- * @example
- * const publishEvent: QuestionEventPublisher = (event) => rabbit.publish(route, event);
- */
-export type QuestionEventPublisher = (event: QuestionWorkerEvent) => Promise<void>;
+import { createQuestionErrorMiddleware } from './question-error.middleware.js';
+import type { QuestionExecution } from './question-error.middleware.js';
+import type { QuestionEventPublisher } from './question-event-publisher.js';
+import type { ExecutionPermitAcquirer } from '../rate-limiting/rate-limit-gate.js';
 
 /**
  * Collect dependencies required to process asynchronous questions.
@@ -25,11 +17,13 @@ export type QuestionEventPublisher = (event: QuestionWorkerEvent) => Promise<voi
  * @example
  * const dependencies: QuestionProcessorDependencies = { generateAnswer, cancellations, publishEvent };
  */
-export type QuestionProcessorDependencies = Readonly<{
-  generateAnswer: AnswerGenerator;
-  cancellations: CancellationRegistry;
-  publishEvent: QuestionEventPublisher;
-}>;
+export interface QuestionProcessorDependencies {
+  readonly generateAnswer: AnswerGenerator;
+  readonly cancellations: CancellationRegistry;
+  readonly publishEvent: QuestionEventPublisher;
+  readonly acquireExecutionPermit: ExecutionPermitAcquirer;
+  readonly logProcessingError?: ErrorLogger;
+}
 
 /**
  * Expose command handlers and bounded in-flight lifecycle controls.
@@ -37,12 +31,12 @@ export type QuestionProcessorDependencies = Readonly<{
  * @example
  * const processor = createQuestionProcessor(dependencies);
  */
-export type QuestionProcessor = Readonly<{
-  handleRequest: (message: QuestionAnswerRequestedMessage) => Promise<void>;
-  handleCancellation: (message: QuestionCancellationRequestedMessage) => Promise<void>;
-  cancelAll: () => void;
-  waitForIdle: (timeoutMs: number) => Promise<void>;
-}>;
+export interface QuestionProcessor {
+  readonly handleRequest: (message: QuestionAnswerRequestedMessage) => Promise<void>;
+  readonly handleCancellation: (message: QuestionCancellationRequestedMessage) => Promise<void>;
+  readonly cancelAll: () => void;
+  readonly waitForIdle: (timeoutMs: number) => Promise<void>;
+}
 
 /**
  * Create command handlers that publish an observable event for every lifecycle stage.
@@ -56,100 +50,55 @@ export const createQuestionProcessor = ({
   generateAnswer,
   cancellations,
   publishEvent,
+  acquireExecutionPermit,
+  logProcessingError,
 }: QuestionProcessorDependencies): QuestionProcessor => {
   const inFlightRequests = new Map<string, Promise<void>>();
 
   /**
-   * Publish a cancellation event caused by the original answer request.
+   * Execute one answer request and emit its successful lifecycle events.
    *
-   * @param message - Original answer request.
-   * @returns A promise resolving after publisher confirmation.
+   * @param message - Validated answer request command.
+   * @param signal - Cancellation signal registered by error middleware.
+   * @returns A promise resolving after its terminal event is confirmed.
    * @example
-   * await publishCancelled(message);
+   * await executeQuestion(message, signal);
    */
-  const publishCancelled = async (message: QuestionAnswerRequestedMessage): Promise<void> => {
+  const executeQuestion: QuestionExecution = async (message, signal) => {
+    const { questionId, userId, content } = message.payload;
+    if (signal.aborted) throw signal.reason;
+    await acquireExecutionPermit(signal);
+    if (signal.aborted) throw signal.reason;
+
     await publishEvent(
       createMessageEnvelope(
-        QUESTION_MESSAGE_TYPES.answerCancelled,
-        { questionId: message.payload.questionId, userId: message.payload.userId },
+        QUESTION_MESSAGE_TYPES.processingStarted,
+        { questionId, userId },
+        { correlationId: message.correlationId, causationId: message.messageId },
+      ),
+    );
+    const result = await generateAnswer(content, signal);
+
+    if (signal.aborted) throw signal.reason;
+
+    await publishEvent(
+      createMessageEnvelope(
+        QUESTION_MESSAGE_TYPES.answerCompleted,
+        {
+          questionId,
+          userId,
+          answer: result.answer,
+          providerResponseId: result.providerResponseId,
+        },
         { correlationId: message.correlationId, causationId: message.messageId },
       ),
     );
   };
-
-  /**
-   * Execute one answer request and emit processing plus one terminal event.
-   *
-   * @param message - Validated answer request command.
-   * @returns A promise resolving after its terminal event is confirmed.
-   * @example
-   * await processRequest(message);
-   */
-  const processRequest = async (message: QuestionAnswerRequestedMessage): Promise<void> => {
-    const { questionId, userId, content } = message.payload;
-    const signal = cancellations.register(questionId);
-
-    try {
-      if (signal.aborted) {
-        await publishCancelled(message);
-        return;
-      }
-
-      await publishEvent(
-        createMessageEnvelope(
-          QUESTION_MESSAGE_TYPES.processingStarted,
-          { questionId, userId },
-          { correlationId: message.correlationId, causationId: message.messageId },
-        ),
-      );
-      const generation = await generateAnswer(content, signal).then(
-        (result) => ({ ok: true, result }) as const,
-        (error: unknown) => ({ ok: false, error }) as const,
-      );
-
-      if (!generation.ok) {
-        if (signal.aborted) {
-          await publishCancelled(message);
-          return;
-        }
-
-        logError('AI answer generation failed', generation.error, {
-          questionId,
-          userId,
-          correlationId: message.correlationId,
-        });
-        await publishEvent(
-          createMessageEnvelope(
-            QUESTION_MESSAGE_TYPES.answerFailed,
-            { questionId, userId, errorCode: 'AI_PROVIDER_FAILED' },
-            { correlationId: message.correlationId, causationId: message.messageId },
-          ),
-        );
-        return;
-      }
-      const { result } = generation;
-
-      if (signal.aborted) {
-        await publishCancelled(message);
-        return;
-      }
-
-      await publishEvent(
-        createMessageEnvelope(
-          QUESTION_MESSAGE_TYPES.answerCompleted,
-          {
-            questionId,
-            userId,
-            answer: result.answer,
-            providerResponseId: result.providerResponseId,
-          },
-          { correlationId: message.correlationId, causationId: message.messageId },
-        ),
-      );
-    } finally {
-      cancellations.release(questionId);
-    }
-  };
+  const processQuestion = createQuestionErrorMiddleware({
+    cancellations,
+    publishEvent,
+    ...(logProcessingError === undefined ? {} : { logProcessingError }),
+  })(executeQuestion);
 
   /**
    * Track one request until its terminal event has been confirmed.
@@ -166,7 +115,7 @@ export const createQuestionProcessor = ({
       return;
     }
 
-    const request = processRequest(message);
+    const request = processQuestion(message);
     inFlightRequests.set(message.payload.questionId, request);
 
     try {

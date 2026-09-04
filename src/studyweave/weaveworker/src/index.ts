@@ -3,6 +3,7 @@ import {
   QUESTION_MESSAGE_ROUTES,
   WORKER_REQUESTS_SUBSCRIPTION,
   configureErrorStackTraces,
+  createFixedWindowRateLimiter,
   createRabbitMqClient,
   createWorkerCancellationSubscription,
   logError,
@@ -14,8 +15,9 @@ import OpenAI from 'openai';
 import { loadWorkerConfig } from './config/environment.js';
 import { createOpenAiAnswerGenerator } from './infrastructure/openai/openai-answer-generator.js';
 import { createCancellationRegistry } from './questions/cancellation-registry.js';
+import type { QuestionEventPublisher } from './questions/question-event-publisher.js';
 import { createQuestionProcessor } from './questions/question-processor.js';
-import type { QuestionEventPublisher } from './questions/question-processor.js';
+import { createRateLimitGate } from './rate-limiting/rate-limit-gate.js';
 
 /**
  * Connect dependencies, start consumers, and register graceful shutdown.
@@ -39,12 +41,17 @@ const startWorker = async (): Promise<void> => {
   try {
     const openAi = new OpenAI({ apiKey: config.openAiApiKey });
     const cancellations = createCancellationRegistry();
+    const openAiRateLimiter = createFixedWindowRateLimiter({
+      maxRequests: config.openAiRateLimitMaxRequests,
+      windowMs: config.openAiRateLimitWindowMs,
+    });
     const publishEvent: QuestionEventPublisher = (event: QuestionWorkerEvent) =>
       rabbit.publish(QUESTION_MESSAGE_ROUTES[event.type], event);
     const processor = createQuestionProcessor({
       cancellations,
       generateAnswer: createOpenAiAnswerGenerator(openAi, config.openAiModel),
       publishEvent,
+      acquireExecutionPermit: createRateLimitGate(openAiRateLimiter, 'openai'),
     });
 
     await rabbit.subscribe(

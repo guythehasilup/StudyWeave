@@ -36,6 +36,20 @@ describe('error logger', () => {
     assert.equal(entries[0]?.stackTrace, null);
   });
 
+  it('preserves the complete stack chain for translated errors', () => {
+    const entries: ErrorLogDetails[] = [];
+    const logger = createErrorLogger((_message, details) => {
+      entries.push(details);
+    });
+    const dependencyError = new Error('RabbitMQ connection failed');
+    const applicationError = new Error('Question dispatch failed', { cause: dependencyError });
+
+    logger('Server request failed', applicationError);
+
+    assert.match(entries[0]?.stackTrace ?? '', /Error: Question dispatch failed/u);
+    assert.match(entries[0]?.stackTrace ?? '', /Caused by:\nError: RabbitMQ connection failed/u);
+  });
+
   it('can capture every available stack frame', () => {
     const previousLimit = Error.stackTraceLimit;
 

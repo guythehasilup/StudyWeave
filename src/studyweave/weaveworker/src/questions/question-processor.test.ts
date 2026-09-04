@@ -21,6 +21,7 @@ describe('question processor', () => {
   it('publishes processing and completion around the provider call', async () => {
     const events: QuestionWorkerEvent[] = [];
     const processor = createQuestionProcessor({
+      acquireExecutionPermit: async () => undefined,
       cancellations: createCancellationRegistry(),
       generateAnswer: async () => ({
         answer: 'Inertia is resistance to motion change.',
@@ -39,11 +40,38 @@ describe('question processor', () => {
     );
   });
 
+  it('waits for an execution permit before publishing processing state', async () => {
+    const operationOrder: string[] = [];
+    const processor = createQuestionProcessor({
+      acquireExecutionPermit: async () => {
+        operationOrder.push('permit');
+      },
+      cancellations: createCancellationRegistry(),
+      generateAnswer: async () => {
+        operationOrder.push('provider');
+        return { answer: 'One answer.', providerResponseId: null };
+      },
+      publishEvent: async (event) => {
+        operationOrder.push(event.type);
+      },
+    });
+
+    await processor.handleRequest(REQUEST);
+
+    assert.deepEqual(operationOrder, [
+      'permit',
+      QUESTION_MESSAGE_TYPES.processingStarted,
+      'provider',
+      QUESTION_MESSAGE_TYPES.answerCompleted,
+    ]);
+  });
+
   it('honors cancellation received before the request begins', async () => {
     const events: QuestionWorkerEvent[] = [];
     const cancellations = createCancellationRegistry();
     let wasProviderCalled = false;
     const processor = createQuestionProcessor({
+      acquireExecutionPermit: async () => undefined,
       cancellations,
       generateAnswer: async () => {
         wasProviderCalled = true;
@@ -64,6 +92,33 @@ describe('question processor', () => {
     );
   });
 
+  it('logs provider failures once and publishes a failed event', async () => {
+    const events: QuestionWorkerEvent[] = [];
+    const errors: unknown[] = [];
+    const providerError = new Error('Provider unavailable');
+    const processor = createQuestionProcessor({
+      acquireExecutionPermit: async () => undefined,
+      cancellations: createCancellationRegistry(),
+      generateAnswer: async () => {
+        throw providerError;
+      },
+      publishEvent: async (event) => {
+        events.push(event);
+      },
+      logProcessingError: (_message, error) => {
+        errors.push(error);
+      },
+    });
+
+    await processor.handleRequest(REQUEST);
+
+    assert.deepEqual(
+      events.map((event) => event.type),
+      [QUESTION_MESSAGE_TYPES.processingStarted, QUESTION_MESSAGE_TYPES.answerFailed],
+    );
+    assert.deepEqual(errors, [providerError]);
+  });
+
   it('coalesces duplicate requests running in the same worker process', async () => {
     const gate: { open?: () => void } = {};
     const waitForRelease = new Promise<void>((resolve) => {
@@ -71,6 +126,7 @@ describe('question processor', () => {
     });
     let providerCallCount = 0;
     const processor = createQuestionProcessor({
+      acquireExecutionPermit: async () => undefined,
       cancellations: createCancellationRegistry(),
       generateAnswer: async () => {
         providerCallCount += 1;

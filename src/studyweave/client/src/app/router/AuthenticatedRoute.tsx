@@ -1,21 +1,21 @@
 import { useEffect } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { getAccessToken } from '../../features/auth/api/token-storage';
+import { useAuthSession } from '../../features/auth/hooks/useAuthSession';
 import { getProtectedRouteRedirect } from './route-redirects';
 import { useRouter } from './useRouter';
 
 /**
- * Configure content protected by browser-tab authentication.
+ * Configure content protected by an unexpired browser-tab session.
  *
  * @example
  * const props: AuthenticatedRouteProps = { children: <QuestionsPage /> };
  */
-export type AuthenticatedRouteProps = Readonly<{
-  children: ReactNode;
-}>;
+export interface AuthenticatedRouteProps {
+  readonly children: ReactNode;
+}
 
 /**
- * Render protected route content or redirect to login when no token exists.
+ * Render protected content or redirect when the session is absent or expired.
  *
  * @param props - Nested protected feature page.
  * @returns Protected content, or nothing while redirecting to login.
@@ -24,7 +24,8 @@ export type AuthenticatedRouteProps = Readonly<{
  */
 export const AuthenticatedRoute = ({ children }: AuthenticatedRouteProps): ReactElement | null => {
   const { navigate } = useRouter();
-  const redirectPath = getProtectedRouteRedirect(getAccessToken() !== null);
+  const session = useAuthSession();
+  const redirectPath = getProtectedRouteRedirect(session !== null);
 
   useEffect(() => {
     if (redirectPath !== null) navigate(redirectPath, { replace: true });

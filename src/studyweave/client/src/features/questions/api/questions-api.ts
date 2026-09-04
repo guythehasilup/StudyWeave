@@ -1,9 +1,10 @@
 import type { ResourceKey } from '../../../shared/localization/resources';
-import { getAccessToken } from '../../auth/api/token-storage';
+import { clearAuthSession, getAccessToken } from '../../auth/api/auth-session-storage';
 import type {
   CreateQuestionInput,
   QuestionContent,
   QuestionDto,
+  QuestionResponseDto,
   QuestionStatus,
 } from '../questions.types';
 
@@ -22,6 +23,7 @@ const API_ERROR_RESOURCE_KEYS: ReadonlySet<ResourceKey> = new Set([
   'questions.errors.cancellationFailed',
   'questions.errors.dispatchFailed',
   'questions.errors.notFound',
+  'questions.errors.rateLimitExceeded',
   'validation.errors.invalidBody',
 ]);
 
@@ -87,6 +89,24 @@ const isQuestionContent = (value: unknown): value is QuestionContent =>
   );
 
 /**
+ * Validate an AI response nested under an owner-authorized question.
+ *
+ * @param value - Unknown response value.
+ * @returns true when identifiers, outcome fields, and timestamp are valid.
+ * @example
+ * const isResponse = isQuestionResponseDto(payload.response);
+ */
+const isQuestionResponseDto = (value: unknown): value is QuestionResponseDto =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  (value.providerResponseId === null || typeof value.providerResponseId === 'string') &&
+  typeof value.createdAt === 'string' &&
+  ((typeof value.answer === 'string' && value.errorCode === null) ||
+    (value.answer === null &&
+      typeof value.errorCode === 'string' &&
+      value.providerResponseId === null));
+
+/**
  * Validate an owner-safe question received from the network.
  *
  * @param value - Unknown parsed response body.
@@ -99,8 +119,11 @@ const isQuestionDto = (value: unknown): value is QuestionDto =>
   typeof value.id === 'string' &&
   isQuestionContent(value.content) &&
   isQuestionStatus(value.status) &&
-  (value.answer === null || typeof value.answer === 'string') &&
-  (value.errorCode === null || typeof value.errorCode === 'string') &&
+  (value.status === 'completed'
+    ? isQuestionResponseDto(value.response) && value.response.answer !== null
+    : value.status === 'failed'
+      ? isQuestionResponseDto(value.response) && value.response.answer === null
+      : value.response === null) &&
   typeof value.createdAt === 'string' &&
   typeof value.updatedAt === 'string';
 
@@ -132,31 +155,33 @@ const isApiResourceKey = (value: unknown): value is ResourceKey =>
   typeof value === 'string' && API_ERROR_RESOURCE_KEYS.has(value as ResourceKey);
 
 /**
- * Execute one authenticated question request and validate its response.
+ * Require the authentication header shared by question operations.
  *
- * @param path - API-relative question path.
- * @param init - Fetch options. Defaults to a GET request.
- * @returns A validated question DTO.
- * @throws {QuestionApiError} For missing authentication, network, HTTP, or parsing failures.
+ * @returns A bearer authorization header.
+ * @throws {QuestionApiError} When no access token is available.
  * @example
- * const question = await requestQuestion('/api/questions/id', { signal });
+ * const headers = getAuthorizationHeaders();
  */
-const requestQuestion = async (path: string, init: RequestInit = {}): Promise<QuestionDto> => {
+const getAuthorizationHeaders = (): Record<string, string> => {
   const accessToken = getAccessToken();
-  if (accessToken === null) {
+  if (!accessToken) {
     throw new QuestionApiError('AUTHENTICATION_REQUIRED', 'auth.errors.authenticationRequired');
   }
 
-  const response = await fetch(API_BASE_URL + path, {
-    ...init,
-    headers: {
-      Authorization: 'Bearer ' + accessToken,
-      ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...init.headers,
-    },
-  }).catch((): never => {
-    throw new QuestionApiError('QUESTION_REQUEST_FAILED', 'questions.errors.requestFailed');
-  });
+  return { Authorization: 'Bearer ' + accessToken };
+};
+
+/**
+ * Validate a question endpoint response and translate API failures.
+ *
+ * @param response - Response returned by a question operation.
+ * @returns A validated question DTO.
+ * @throws {QuestionApiError} For unsuccessful or malformed responses.
+ * @example
+ * const question = await parseQuestionResponse(response);
+ */
+const parseQuestionResponse = async (response: Response): Promise<QuestionDto> => {
+  if (response.status === 401) clearAuthSession();
   const payload = await parseJson(response);
 
   if (!response.ok) {
@@ -191,8 +216,20 @@ const requestQuestion = async (path: string, init: RequestInit = {}): Promise<Qu
  * @example
  * const question = await createQuestion(input);
  */
-export const createQuestion = (input: CreateQuestionInput): Promise<QuestionDto> =>
-  requestQuestion('/api/questions', { method: 'POST', body: JSON.stringify(input) });
+export const createQuestion = async (input: CreateQuestionInput): Promise<QuestionDto> => {
+  const response = await fetch(API_BASE_URL + '/api/questions', {
+    method: 'POST',
+    headers: {
+      ...getAuthorizationHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  }).catch((): never => {
+    throw new QuestionApiError('QUESTION_REQUEST_FAILED', 'questions.errors.requestFailed');
+  });
+
+  return parseQuestionResponse(response);
+};
 
 /**
  * Poll the latest owner-scoped question state.
@@ -203,8 +240,19 @@ export const createQuestion = (input: CreateQuestionInput): Promise<QuestionDto>
  * @example
  * const question = await getQuestion(questionId, signal);
  */
-export const getQuestion = (questionId: string, signal: AbortSignal): Promise<QuestionDto> =>
-  requestQuestion('/api/questions/' + encodeURIComponent(questionId), { signal });
+export const getQuestion = async (
+  questionId: string,
+  signal: AbortSignal,
+): Promise<QuestionDto> => {
+  const response = await fetch(API_BASE_URL + '/api/questions/' + encodeURIComponent(questionId), {
+    headers: getAuthorizationHeaders(),
+    signal,
+  }).catch((): never => {
+    throw new QuestionApiError('QUESTION_REQUEST_FAILED', 'questions.errors.requestFailed');
+  });
+
+  return parseQuestionResponse(response);
+};
 
 /**
  * Request best-effort cancellation for an active question.
@@ -214,7 +262,16 @@ export const getQuestion = (questionId: string, signal: AbortSignal): Promise<Qu
  * @example
  * const question = await cancelQuestion(questionId);
  */
-export const cancelQuestion = (questionId: string): Promise<QuestionDto> =>
-  requestQuestion('/api/questions/' + encodeURIComponent(questionId) + '/cancellations', {
-    method: 'POST',
+export const cancelQuestion = async (questionId: string): Promise<QuestionDto> => {
+  const response = await fetch(
+    API_BASE_URL + '/api/questions/' + encodeURIComponent(questionId) + '/cancellations',
+    {
+      method: 'POST',
+      headers: getAuthorizationHeaders(),
+    },
+  ).catch((): never => {
+    throw new QuestionApiError('QUESTION_REQUEST_FAILED', 'questions.errors.requestFailed');
   });
+
+  return parseQuestionResponse(response);
+};

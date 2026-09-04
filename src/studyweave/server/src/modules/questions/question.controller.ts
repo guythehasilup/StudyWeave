@@ -1,27 +1,7 @@
 import type { RequestHandler } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { getRequestCorrelationId, getRequestIdentity } from '../../common/http/request-values.js';
 import type { QuestionService } from './question.service.js';
-
-/**
- * Return request identity after protected-route authentication.
- *
- * @param request - Authenticated Express request.
- * @returns Identity attached by authentication middleware.
- * @example
- * const identity = getIdentity(request);
- */
-const getIdentity = (request: Parameters<RequestHandler>[0]) => request.identity!;
-
-/**
- * Return request correlation initialized by global middleware.
- *
- * @param request - Express request carrying optional tracing context.
- * @returns Correlation identifier or a stable diagnostic fallback.
- * @example
- * const correlationId = getCorrelationId(request);
- */
-const getCorrelationId = (request: Parameters<RequestHandler>[0]): string =>
-  request.context?.correlationId ?? 'missing-correlation-id';
 
 /**
  * Return the question identifier already validated by route middleware.
@@ -47,9 +27,9 @@ export const createQuestionHandler =
   async (request, response, next) => {
     try {
       const question = await questions.create(
-        getIdentity(request).userId,
+        getRequestIdentity(request).userId,
         request.body,
-        getCorrelationId(request),
+        getRequestCorrelationId(request),
       );
       response.status(StatusCodes.ACCEPTED).json(question);
     } catch (error: unknown) {
@@ -69,7 +49,10 @@ export const getQuestionHandler =
   (questions: QuestionService): RequestHandler =>
   async (request, response, next) => {
     try {
-      const question = await questions.get(getIdentity(request).userId, getQuestionId(request));
+      const question = await questions.get(
+        getRequestIdentity(request).userId,
+        getQuestionId(request),
+      );
       response.status(StatusCodes.OK).json(question);
     } catch (error: unknown) {
       next(error);
@@ -89,9 +72,9 @@ export const cancelQuestionHandler =
   async (request, response, next) => {
     try {
       const question = await questions.cancel(
-        getIdentity(request).userId,
+        getRequestIdentity(request).userId,
         getQuestionId(request),
-        getCorrelationId(request),
+        getRequestCorrelationId(request),
       );
       response.status(StatusCodes.ACCEPTED).json(question);
     } catch (error: unknown) {

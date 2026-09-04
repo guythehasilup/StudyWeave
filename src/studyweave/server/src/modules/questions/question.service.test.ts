@@ -4,6 +4,7 @@ import { QUESTION_MESSAGE_TYPES, QUESTION_STATUSES } from '@studyweave/swwai-con
 import type { QuestionDto, QuestionMessage } from '@studyweave/swwai-contract';
 import { ApiError } from '../../common/errors/api-error.js';
 import type { QuestionRepository } from './question.repository.js';
+import type { WorkerQuestionUpdate } from './question.repository.js';
 import { createQuestionService } from './question.service.js';
 
 const USER_ID = 'e778be29-03dc-4d49-a3f8-48262738136b';
@@ -13,8 +14,7 @@ const QUESTION: QuestionDto = {
   id: QUESTION_ID,
   content: CONTENT,
   status: QUESTION_STATUSES.queued,
-  answer: null,
-  errorCode: null,
+  response: null,
   createdAt: '2026-09-03T10:00:00.000Z',
   updatedAt: '2026-09-03T10:00:00.000Z',
 };
@@ -62,6 +62,31 @@ describe('question service', () => {
     assert.equal(messages[0]?.type, QUESTION_MESSAGE_TYPES.answerRequested);
   });
 
+  it('preserves the broker failure as the cause of a dispatch API error', async () => {
+    const brokerError = new Error('RabbitMQ channel closed');
+    const questions: QuestionRepository = {
+      createQuestion: async () => QUESTION,
+      findQuestionForUser: async () => QUESTION,
+      markDispatchFailed: async () => undefined,
+      markCancelledByUser: async () => QUESTION,
+      applyWorkerUpdate: async () => undefined,
+    };
+    const service = createQuestionService({
+      questions,
+      publishMessage: async () => {
+        throw brokerError;
+      },
+    });
+
+    await assert.rejects(
+      service.create(USER_ID, { content: CONTENT }, 'request-123'),
+      (error: unknown) =>
+        error instanceof ApiError &&
+        error.code === 'QUESTION_DISPATCH_FAILED' &&
+        error.cause === brokerError,
+    );
+  });
+
   it('does not reveal a question owned by another user', async () => {
     const { service } = createDependencies({ findQuestionForUser: async () => null });
 
@@ -77,5 +102,38 @@ describe('question service', () => {
 
     assert.equal(result.status, QUESTION_STATUSES.cancelled);
     assert.equal(messages[0]?.type, QUESTION_MESSAGE_TYPES.cancellationRequested);
+  });
+
+  it('forwards completed answers and provider identifiers to response persistence', async () => {
+    const updates: WorkerQuestionUpdate[] = [];
+    const { service } = createDependencies({
+      applyWorkerUpdate: async (update) => {
+        updates.push(update);
+      },
+    });
+
+    await service.applyWorkerEvent({
+      messageId: '2777ec46-0aa9-4e24-8ee8-ecfaffb6df0f',
+      type: QUESTION_MESSAGE_TYPES.answerCompleted,
+      version: 1,
+      occurredAt: '2026-09-03T10:00:01.000Z',
+      correlationId: 'request-123',
+      payload: {
+        questionId: QUESTION_ID,
+        userId: USER_ID,
+        answer: 'Inertia is resistance to a change in motion.',
+        providerResponseId: 'resp_123',
+      },
+    });
+
+    assert.deepEqual(updates[0], {
+      questionId: QUESTION_ID,
+      userId: USER_ID,
+      messageId: '2777ec46-0aa9-4e24-8ee8-ecfaffb6df0f',
+      occurredAt: new Date('2026-09-03T10:00:01.000Z'),
+      status: QUESTION_STATUSES.completed,
+      answer: 'Inertia is resistance to a change in motion.',
+      providerResponseId: 'resp_123',
+    });
   });
 });

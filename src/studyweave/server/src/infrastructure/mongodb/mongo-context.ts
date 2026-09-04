@@ -3,6 +3,7 @@ import type { Collection } from 'mongodb';
 import type { AppConfig } from '../../config/environment.js';
 import type { UserDocument } from '../../modules/users/user.document.js';
 import type { QuestionDocument } from '../../modules/questions/question.document.js';
+import type { QuestionResponseDocument } from '../../modules/questions/question-response.document.js';
 
 /**
  * Hold the single MongoDB client and typed service-owned collections.
@@ -10,11 +11,12 @@ import type { QuestionDocument } from '../../modules/questions/question.document
  * @example
  * const mongo = await createMongoContext(config);
  */
-export type MongoContext = Readonly<{
-  client: MongoClient;
-  users: Collection<UserDocument>;
-  questions: Collection<QuestionDocument>;
-}>;
+export interface MongoContext {
+  readonly client: MongoClient;
+  readonly users: Collection<UserDocument>;
+  readonly questions: Collection<QuestionDocument>;
+  readonly responses: Collection<QuestionResponseDocument>;
+}
 
 /**
  * Connect one official MongoDB driver client for the service process.
@@ -36,8 +38,9 @@ export const createMongoContext = async (config: AppConfig): Promise<MongoContex
   const database = client.db(config.mongodbDatabase);
   const users = database.collection<UserDocument>('users');
   const questions = database.collection<QuestionDocument>('questions');
+  const responses = database.collection<QuestionResponseDocument>('responses');
 
-  return { client, users, questions };
+  return { client, users, questions, responses };
 };
 
 /**

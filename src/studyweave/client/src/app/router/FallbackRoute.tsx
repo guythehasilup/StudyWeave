@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { getAccessToken } from '../../features/auth/api/token-storage';
+import { useAuthSession } from '../../features/auth/hooks/useAuthSession';
 import { getFallbackRouteRedirect } from './route-redirects';
 import { useRouter } from './useRouter';
 
@@ -12,7 +12,8 @@ import { useRouter } from './useRouter';
  */
 export const FallbackRoute = (): null => {
   const { navigate } = useRouter();
-  const redirectPath = getFallbackRouteRedirect(getAccessToken() !== null);
+  const session = useAuthSession();
+  const redirectPath = getFallbackRouteRedirect(session !== null);
 
   useEffect(() => {
     navigate(redirectPath, { replace: true });

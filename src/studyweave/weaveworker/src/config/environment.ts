@@ -7,6 +7,8 @@ const environmentSchema = z.object({
   RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
   OPENAI_API_KEY: z.string().min(1, 'CONFIG_OPENAI_API_KEY_REQUIRED'),
   OPENAI_MODEL: z.string().min(1, 'CONFIG_OPENAI_MODEL_REQUIRED'),
+  OPENAI_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(60),
+  OPENAI_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 });
 
@@ -16,14 +18,16 @@ const environmentSchema = z.object({
  * @example
  * const config = loadWorkerConfig(process.env);
  */
-export type WorkerConfig = Readonly<{
-  rabbitmqUrl: string;
-  rabbitmqPrefetch: number;
-  rabbitmqPublishConfirmTimeoutMs: number;
-  openAiApiKey: string;
-  openAiModel: string;
-  shutdownTimeoutMs: number;
-}>;
+export interface WorkerConfig {
+  readonly rabbitmqUrl: string;
+  readonly rabbitmqPrefetch: number;
+  readonly rabbitmqPublishConfirmTimeoutMs: number;
+  readonly openAiApiKey: string;
+  readonly openAiModel: string;
+  readonly openAiRateLimitMaxRequests: number;
+  readonly openAiRateLimitWindowMs: number;
+  readonly shutdownTimeoutMs: number;
+}
 
 /**
  * Validate worker environment variables once at startup.
@@ -43,6 +47,8 @@ export const loadWorkerConfig = (environment: NodeJS.ProcessEnv = process.env): 
     rabbitmqPublishConfirmTimeoutMs: parsed.RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_MS,
     openAiApiKey: parsed.OPENAI_API_KEY,
     openAiModel: parsed.OPENAI_MODEL,
+    openAiRateLimitMaxRequests: parsed.OPENAI_RATE_LIMIT_MAX_REQUESTS,
+    openAiRateLimitWindowMs: parsed.OPENAI_RATE_LIMIT_WINDOW_MS,
     shutdownTimeoutMs: parsed.SHUTDOWN_TIMEOUT_MS,
   };
 };

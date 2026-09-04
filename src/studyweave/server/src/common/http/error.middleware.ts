@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import type { AppConfig } from '../../config/environment.js';
 import { ApiError } from '../errors/api-error.js';
 import type { ApiErrorCode, ApiResourceKey } from '../errors/api-error.js';
+import { getRequestCorrelationId } from './request-values.js';
 
 /**
  * Describe the client-safe error response returned by every failed request.
@@ -16,23 +17,12 @@ import type { ApiErrorCode, ApiResourceKey } from '../errors/api-error.js';
  *   correlationId: 'request-123',
  * };
  */
-export type ApiErrorBody = Readonly<{
-  code: ApiErrorCode;
-  resourceKey: ApiResourceKey;
-  correlationId: string;
-  details?: Readonly<Record<string, unknown>>;
-}>;
-
-/**
- * Read the correlation identifier initialized by request-context middleware.
- *
- * @param request - Current Express request.
- * @returns The request correlation identifier, or a stable fallback.
- * @example
- * const correlationId = getCorrelationId(request);
- */
-const getCorrelationId = (request: Parameters<RequestHandler>[0]): string =>
-  request.context?.correlationId ?? 'missing-correlation-id';
+export interface ApiErrorBody {
+  readonly code: ApiErrorCode;
+  readonly resourceKey: ApiResourceKey;
+  readonly correlationId: string;
+  readonly details?: Readonly<Record<string, unknown>>;
+}
 
 /**
  * Return a stable not-found error for unmatched routes.
@@ -45,7 +35,7 @@ export const notFoundHandler: RequestHandler = (request, response) => {
   const body: ApiErrorBody = {
     code: 'NOT_FOUND',
     resourceKey: 'common.errors.notFound',
-    correlationId: getCorrelationId(request),
+    correlationId: getRequestCorrelationId(request),
   };
 
   response.status(StatusCodes.NOT_FOUND).json(body);
@@ -62,9 +52,20 @@ export const notFoundHandler: RequestHandler = (request, response) => {
 export const createErrorHandler =
   (config: AppConfig): ErrorRequestHandler =>
   (error: unknown, request, response, _next) => {
-    const correlationId = getCorrelationId(request);
+    const correlationId = getRequestCorrelationId(request);
 
     if (error instanceof ApiError) {
+      if (config.nodeEnv !== 'test' && error.statusCode >= StatusCodes.INTERNAL_SERVER_ERROR) {
+        logError('Server request failed', error, {
+          ...error.options?.logContext,
+          correlationId,
+          method: request.method,
+          path: request.originalUrl,
+          statusCode: error.statusCode,
+          errorCode: error.code,
+        });
+      }
+
       const body: ApiErrorBody = {
         code: error.code,
         resourceKey: error.resourceKey,

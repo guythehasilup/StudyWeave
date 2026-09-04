@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "tsx --test src/logging/error-logger.test.ts src/messaging/question-messages.test.ts",
+    "test": "tsx --test src/logging/error-logger.test.ts src/messaging/question-messages.test.ts src/questions/question.test.ts src/rate-limiting/fixed-window-rate-limiter.test.ts",
     "format": "prettier --ignore-path ../../../.prettierignore --write .",
     "format:check": "prettier --ignore-path ../../../.prettierignore --check .",
     "prepare": "npm run build"

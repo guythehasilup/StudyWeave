@@ -4,10 +4,10 @@
  * @example
  * const values: LoginFormValues = { username: '', password: '' };
  */
-export type LoginFormValues = Readonly<{
-  username: string;
-  password: string;
-}>;
+export interface LoginFormValues {
+  readonly username: string;
+  readonly password: string;
+}
 
 /**
  * Represent editable registration fields owned by React Hook Form.
@@ -15,11 +15,11 @@ export type LoginFormValues = Readonly<{
  * @example
  * const values: RegisterFormValues = { username: '', password: '', displayName: '' };
  */
-export type RegisterFormValues = Readonly<{
-  username: string;
-  password: string;
-  displayName: string;
-}>;
+export interface RegisterFormValues {
+  readonly username: string;
+  readonly password: string;
+  readonly displayName: string;
+}
 
 /**
  * Validated login request sent to the authentication API.
@@ -43,15 +43,15 @@ export type RegisterInput = Readonly<RegisterFormValues>;
  * @example
  * const user: AuthUserDto = { id, username, displayName, isActive: true, lastLoginAt: null, createdAt, updatedAt };
  */
-export type AuthUserDto = Readonly<{
-  id: string;
-  username: string;
-  displayName: string;
-  isActive: boolean;
-  lastLoginAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}>;
+export interface AuthUserDto {
+  readonly id: string;
+  readonly username: string;
+  readonly displayName: string;
+  readonly isActive: boolean;
+  readonly lastLoginAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
 
 /**
  * Authenticated session returned by login and registration.
@@ -59,7 +59,30 @@ export type AuthUserDto = Readonly<{
  * @example
  * const session: AuthSessionDto = { accessToken, user };
  */
-export type AuthSessionDto = Readonly<{
-  accessToken: string;
-  user: AuthUserDto;
-}>;
+export interface AuthSessionDto {
+  readonly accessToken: string;
+  readonly user: AuthUserDto;
+}
+
+/**
+ * Validate public user data read from an API or browser storage boundary.
+ *
+ * @param value - Untrusted parsed value.
+ * @returns True when every public user field has the expected shape.
+ * @example
+ * const user = isAuthUserDto(value) ? value : null;
+ */
+export const isAuthUserDto = (value: unknown): value is AuthUserDto => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+
+  const user = value as Record<string, unknown>;
+  return (
+    typeof user.id === 'string' &&
+    typeof user.username === 'string' &&
+    typeof user.displayName === 'string' &&
+    typeof user.isActive === 'boolean' &&
+    (user.lastLoginAt === null || typeof user.lastLoginAt === 'string') &&
+    typeof user.createdAt === 'string' &&
+    typeof user.updatedAt === 'string'
+  );
+};

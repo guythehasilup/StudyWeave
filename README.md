@@ -55,13 +55,18 @@ four package folders, then run the client, server, and worker with `npm run dev`
 1. The authenticated client submits extensible question content to the server.
 2. The server persists `queued` state, publishes a durable command, and immediately returns 202.
 3. `weaveworker` consumes the command and calls OpenAI through a provider-neutral operation.
-4. Worker lifecycle events update the server-owned question document.
+4. Worker lifecycle events update the question and persist AI outcomes in a separate response.
 5. The client polls the owner-scoped question endpoint until it reaches a terminal state.
 
 RabbitMQ uses at-least-once delivery, manual acknowledgements, publisher confirms, and a dead-letter
 queue. Server status transitions are guarded so redelivery cannot overwrite terminal or cancelled
 state. Stop is best effort and is broadcast to every worker replica so the process that owns an
 in-flight provider request can abort it.
+
+Question submission is limited per authenticated user at the server boundary. AI request starts
+are limited separately inside each worker process; excess RabbitMQ deliveries wait for quota rather
+than being discarded. These POC limiters are process-local and use injectable contracts so a shared
+distributed limiter can replace them when the services are horizontally scaled.
 
 ## Roadmap
 

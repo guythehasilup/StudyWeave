@@ -3,7 +3,6 @@ import {
   QUESTION_STATUSES,
   createMessageEnvelope,
   isActiveQuestionStatus,
-  logError,
 } from '@studyweave/swwai-contract';
 import type {
   QuestionContent,
@@ -21,9 +20,9 @@ import type { QuestionRepository } from './question.repository.js';
  * @example
  * const input: CreateQuestionInput = { content: { parts: [{ type: 'text', text: 'Why?' }] } };
  */
-export type CreateQuestionInput = Readonly<{
-  content: QuestionContent;
-}>;
+export interface CreateQuestionInput {
+  readonly content: QuestionContent;
+}
 
 /**
  * Describe validated owner-scoped question route parameters.
@@ -31,9 +30,9 @@ export type CreateQuestionInput = Readonly<{
  * @example
  * const params: QuestionParams = { questionId };
  */
-export type QuestionParams = Readonly<{
-  questionId: string;
-}>;
+export interface QuestionParams {
+  readonly questionId: string;
+}
 
 /**
  * Publish any message defined by the shared AI contract.
@@ -49,10 +48,10 @@ export type QuestionMessagePublisher = (message: QuestionMessage) => Promise<voi
  * @example
  * const dependencies: QuestionServiceDependencies = { questions, publishMessage };
  */
-export type QuestionServiceDependencies = Readonly<{
-  questions: QuestionRepository;
-  publishMessage: QuestionMessagePublisher;
-}>;
+export interface QuestionServiceDependencies {
+  readonly questions: QuestionRepository;
+  readonly publishMessage: QuestionMessagePublisher;
+}
 
 /**
  * Expose asynchronous question operations to HTTP and RabbitMQ adapters.
@@ -60,16 +59,20 @@ export type QuestionServiceDependencies = Readonly<{
  * @example
  * const service = createQuestionService(dependencies);
  */
-export type QuestionService = Readonly<{
-  create: (
+export interface QuestionService {
+  readonly create: (
     userId: string,
     input: CreateQuestionInput,
     correlationId: string,
   ) => Promise<QuestionDto>;
-  get: (userId: string, questionId: string) => Promise<QuestionDto>;
-  cancel: (userId: string, questionId: string, correlationId: string) => Promise<QuestionDto>;
-  applyWorkerEvent: (event: QuestionWorkerEvent) => Promise<void>;
-}>;
+  readonly get: (userId: string, questionId: string) => Promise<QuestionDto>;
+  readonly cancel: (
+    userId: string,
+    questionId: string,
+    correlationId: string,
+  ) => Promise<QuestionDto>;
+  readonly applyWorkerEvent: (event: QuestionWorkerEvent) => Promise<void>;
+}
 
 /**
  * Create question submission, polling, cancellation, and worker-event operations.
@@ -106,15 +109,15 @@ export const createQuestionService = ({
       await publishMessage(message);
     } catch (error: unknown) {
       await questions.markDispatchFailed(question.id, userId);
-      logError('Question command publication failed', error, {
-        questionId: question.id,
-        userId,
-        correlationId,
-      });
       throw new ApiError(
         StatusCodes.SERVICE_UNAVAILABLE,
         'QUESTION_DISPATCH_FAILED',
         'questions.errors.dispatchFailed',
+        undefined,
+        {
+          cause: error,
+          logContext: { questionId: question.id, userId },
+        },
       );
     }
 
@@ -165,15 +168,12 @@ export const createQuestionService = ({
     try {
       await publishMessage(message);
     } catch (error: unknown) {
-      logError('Question cancellation publication failed', error, {
-        questionId,
-        userId,
-        correlationId,
-      });
       throw new ApiError(
         StatusCodes.SERVICE_UNAVAILABLE,
         'QUESTION_CANCELLATION_FAILED',
         'questions.errors.cancellationFailed',
+        undefined,
+        { cause: error, logContext: { questionId, userId } },
       );
     }
 
@@ -208,6 +208,7 @@ export const createQuestionService = ({
           ...baseUpdate,
           status: QUESTION_STATUSES.completed,
           answer: event.payload.answer,
+          providerResponseId: event.payload.providerResponseId,
         });
         return;
       case QUESTION_MESSAGE_TYPES.answerFailed:

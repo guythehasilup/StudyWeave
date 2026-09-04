@@ -16,10 +16,9 @@ export const createAuthenticationMiddleware =
   (request, _response, next) => {
     const authorization = request.header('authorization');
     const match = authorization?.match(/^Bearer\s+(.+)$/iu);
-    const identity =
-      match === undefined || match === null ? null : tokens.verifyAccessToken(match[1]);
+    const identity = match ? tokens.verifyAccessToken(match[1]) : null;
 
-    if (identity === null) {
+    if (!identity) {
       next(
         new ApiError(
           StatusCodes.UNAUTHORIZED,

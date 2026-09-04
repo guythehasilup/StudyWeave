@@ -4,6 +4,7 @@ import {
   QUESTION_MESSAGE_ROUTES,
   SERVER_EVENTS_SUBSCRIPTION,
   configureErrorStackTraces,
+  createFixedWindowRateLimiter,
   createRabbitMqClient,
   logError,
   questionWorkerEventSchema,
@@ -60,7 +61,10 @@ const startServer = async (): Promise<void> => {
   const mongo = await createMongoContext(config);
 
   try {
-    await Promise.all([ensureUserIndexes(mongo.users), ensureQuestionIndexes(mongo.questions)]);
+    await Promise.all([
+      ensureUserIndexes(mongo.users),
+      ensureQuestionIndexes(mongo.questions, mongo.responses),
+    ]);
 
     const rabbit = await createRabbitMqClient(
       {
@@ -79,11 +83,17 @@ const startServer = async (): Promise<void> => {
         tokens,
         passwords: { hashPassword, verifyPassword },
       });
-      const questionRepository = createQuestionRepository(mongo.questions);
+      const questionRepository = createQuestionRepository(mongo.questions, mongo.responses);
+      const questionSubmissionRateLimiter = createFixedWindowRateLimiter({
+        maxRequests: config.questionRateLimitMaxRequests,
+        windowMs: config.questionRateLimitWindowMs,
+      });
       const publishMessage: QuestionMessagePublisher = (message: QuestionMessage) =>
         rabbit.publish(QUESTION_MESSAGE_ROUTES[message.type], message);
       const questions = createQuestionService({ questions: questionRepository, publishMessage });
 
+      // Worker events form the asynchronous return path: each event advances the
+      // persisted question state that authenticated clients observe by polling.
       await rabbit.subscribe(
         SERVER_EVENTS_SUBSCRIPTION,
         questionWorkerEventSchema,
@@ -93,7 +103,7 @@ const startServer = async (): Promise<void> => {
       const app = createApplication({
         config,
         authRouter: createAuthRouter(auth),
-        questionRouter: createQuestionRouter(questions, tokens),
+        questionRouter: createQuestionRouter(questions, tokens, questionSubmissionRateLimiter),
       });
       const server = app.listen(config.port, () => {
         console.info('StudyWeave server listening', { port: config.port });

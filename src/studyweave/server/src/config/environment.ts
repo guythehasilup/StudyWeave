@@ -16,6 +16,8 @@ const environmentSchema = z.object({
   RABBITMQ_URL: z.string().min(1).default('amqp://guest:guest@localhost:5672'),
   RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(4),
   RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
+  QUESTION_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
+  QUESTION_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 });
 
@@ -25,23 +27,25 @@ const environmentSchema = z.object({
  * @example
  * const config = loadAppConfig(process.env);
  */
-export type AppConfig = Readonly<{
-  nodeEnv: 'development' | 'test' | 'production';
-  port: number;
-  mongodbUri: string;
-  mongodbDatabase: string;
-  mongodbMaxPoolSize: number;
-  mongodbServerSelectionTimeoutMs: number;
-  jwtSecret: string;
-  jwtIssuer: string;
-  jwtAudience: string;
-  jwtExpiresIn: string;
-  clientOrigin: string;
-  rabbitmqUrl: string;
-  rabbitmqPrefetch: number;
-  rabbitmqPublishConfirmTimeoutMs: number;
-  shutdownTimeoutMs: number;
-}>;
+export interface AppConfig {
+  readonly nodeEnv: 'development' | 'test' | 'production';
+  readonly port: number;
+  readonly mongodbUri: string;
+  readonly mongodbDatabase: string;
+  readonly mongodbMaxPoolSize: number;
+  readonly mongodbServerSelectionTimeoutMs: number;
+  readonly jwtSecret: string;
+  readonly jwtIssuer: string;
+  readonly jwtAudience: string;
+  readonly jwtExpiresIn: string;
+  readonly clientOrigin: string;
+  readonly rabbitmqUrl: string;
+  readonly rabbitmqPrefetch: number;
+  readonly rabbitmqPublishConfirmTimeoutMs: number;
+  readonly questionRateLimitMaxRequests: number;
+  readonly questionRateLimitWindowMs: number;
+  readonly shutdownTimeoutMs: number;
+}
 
 /**
  * Validate environment variables once at process startup.
@@ -70,6 +74,8 @@ export const loadAppConfig = (environment: NodeJS.ProcessEnv = process.env): App
     rabbitmqUrl: parsed.RABBITMQ_URL,
     rabbitmqPrefetch: parsed.RABBITMQ_PREFETCH,
     rabbitmqPublishConfirmTimeoutMs: parsed.RABBITMQ_PUBLISH_CONFIRM_TIMEOUT_MS,
+    questionRateLimitMaxRequests: parsed.QUESTION_RATE_LIMIT_MAX_REQUESTS,
+    questionRateLimitWindowMs: parsed.QUESTION_RATE_LIMIT_WINDOW_MS,
     shutdownTimeoutMs: parsed.SHUTDOWN_TIMEOUT_MS,
   };
 };

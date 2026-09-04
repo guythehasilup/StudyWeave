@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build:contract": "npm --prefix ../SwWAI.contract run build",
     "build": "npm run build:contract && tsc",
-    "test": "tsx --test src/modules/auth/auth.service.test.ts src/modules/questions/question.service.test.ts",
+    "test": "tsx --test src/common/http/rate-limit.middleware.test.ts src/modules/auth/auth.service.test.ts src/modules/questions/question.service.test.ts",
     "format": "prettier --ignore-path ../../../.prettierignore --write .",
     "format:check": "prettier --ignore-path ../../../.prettierignore --check .",
     "start": "node --enable-source-maps dist/index.js"

@@ -5,7 +5,6 @@ import {
   Container,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
@@ -14,6 +13,7 @@ import type { ReactElement } from 'react';
 import { useTranslate } from '../../../shared/localization/useTranslate';
 import type { ResourceKey } from '../../../shared/localization/resources';
 import { SwForm } from '../../../shared/ui/SwForm';
+import { SwTextField } from '../../../shared/ui/SwTextField';
 import { useCancelQuestionMutation } from '../hooks/useCancelQuestionMutation';
 import { useCreateQuestionMutation } from '../hooks/useCreateQuestionMutation';
 import { useQuestion } from '../hooks/useQuestion';
@@ -76,8 +76,6 @@ export const QuestionsPage = (): ReactElement => {
    */
   const handleSubmit = async (values: QuestionFormValues): Promise<void> => {
     if (isActive) return;
-    createMutation.reset();
-    cancelMutation.reset();
 
     try {
       const createdQuestion = await createMutation.mutateAsync({
@@ -100,7 +98,6 @@ export const QuestionsPage = (): ReactElement => {
    */
   const handleStop = async (): Promise<void> => {
     if (questionId === null || !isActive || isStopping) return;
-    cancelMutation.reset();
 
     try {
       await cancelMutation.mutateAsync(questionId);
@@ -129,7 +126,7 @@ export const QuestionsPage = (): ReactElement => {
                 const errorKey = fieldState.error?.message as ResourceKey | undefined;
 
                 return (
-                  <TextField
+                  <SwTextField
                     {...field}
                     onChange={(event) => {
                       field.onChange(event);
@@ -143,7 +140,6 @@ export const QuestionsPage = (): ReactElement => {
                     minRows={5}
                     multiline
                     required
-                    fullWidth
                   />
                 );
               }}
@@ -192,12 +188,14 @@ export const QuestionsPage = (): ReactElement => {
                 {translate(QUESTION_STATUS_KEYS[question.status])}
               </Typography>
 
-              {question.status === 'completed' && question.answer !== null ? (
+              {question.status === 'completed' && question.response?.answer ? (
                 <>
                   <Typography component="h2" variant="h6">
                     {translate('questions.answerHeading')}
                   </Typography>
-                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>{question.answer}</Typography>
+                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                    {question.response.answer}
+                  </Typography>
                 </>
               ) : null}
 

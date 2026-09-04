@@ -4,7 +4,9 @@
  * @example
  * const context: ErrorLogContext = { correlationId: 'request-123' };
  */
-export type ErrorLogContext = Readonly<Record<string, unknown>>;
+export interface ErrorLogContext {
+  readonly [key: string]: unknown;
+}
 
 /**
  * Describe the structured fields written for a service error.
@@ -18,14 +20,12 @@ export type ErrorLogContext = Readonly<Record<string, unknown>>;
  *   stackTrace: 'Error: Connection failed',
  * };
  */
-export type ErrorLogDetails = Readonly<
-  Record<string, unknown> & {
-    level: 'error';
-    errorName: string;
-    errorMessage: string;
-    stackTrace: string | null;
-  }
->;
+export interface ErrorLogDetails extends ErrorLogContext {
+  readonly level: 'error';
+  readonly errorName: string;
+  readonly errorMessage: string;
+  readonly stackTrace: string | null;
+}
 
 /**
  * Write a structured error event and its original thrown value to an error-level output.
@@ -47,6 +47,46 @@ export type ErrorLogWriter = (message: string, details: ErrorLogDetails, error: 
  * logError('Message processing failed', error, { correlationId });
  */
 export type ErrorLogger = (message: string, error: unknown, context?: ErrorLogContext) => void;
+
+const ANSI_RED = '\u001b[31m';
+const ANSI_RESET = '\u001b[0m';
+
+/**
+ * Determine whether stderr supports terminal color without an explicit opt-out.
+ *
+ * @returns True for an interactive terminal when `NO_COLOR` is not set.
+ * @example
+ * const colorize = supportsErrorColor();
+ */
+const supportsErrorColor = (): boolean =>
+  process.stderr.isTTY === true && process.env.NO_COLOR === undefined;
+
+/**
+ * Render an Error and every nested Error cause as a readable stack chain.
+ *
+ * @param error - Native error whose diagnostic chain should be preserved.
+ * @param seen - Errors already visited while guarding against circular causes.
+ * @returns A multiline native stack with each cause appended.
+ * @example
+ * const stack = formatErrorStack(new Error('Connection failed'));
+ */
+const formatErrorStack = (error: Error, seen: ReadonlySet<Error> = new Set()): string => {
+  if (seen.has(error)) return '[Circular error cause]';
+
+  const visited = new Set(seen);
+  visited.add(error);
+  const stack = error.stack ?? `${error.name}: ${error.message}`;
+
+  if (error.cause instanceof Error) {
+    return `${stack}\nCaused by:\n${formatErrorStack(error.cause, visited)}`;
+  }
+
+  if (error.cause !== undefined) {
+    return `${stack}\nCaused by: ${String(error.cause)}`;
+  }
+
+  return stack;
+};
 
 /**
  * Write one readable multiline error block through stderr.
@@ -70,7 +110,8 @@ const writeConsoleError: ErrorLogWriter = (message, details, error) => {
       ? `${error.name}: ${error.message}`
       : `${details.errorName}: ${errorMessage}`);
 
-  console.error(`${message}\n${JSON.stringify(metadata, null, 2)}\n${formattedError}`);
+  const output = `${message}\n${JSON.stringify(metadata, null, 2)}\n${formattedError}`;
+  console.error(supportsErrorColor() ? `${ANSI_RED}${output}${ANSI_RESET}` : output);
 };
 
 /**
@@ -99,7 +140,7 @@ const describeError = (
     return {
       errorName: error.name,
       errorMessage: error.message,
-      stackTrace: error.stack ?? null,
+      stackTrace: formatErrorStack(error),
     };
   }
 
