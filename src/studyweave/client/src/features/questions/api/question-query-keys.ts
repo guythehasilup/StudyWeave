@@ -1,3 +1,5 @@
+import type { UUID } from '../questions.types';
+
 /** Stable TanStack Query keys owned by the questions feature. */
 export const questionQueryKeys = {
   all: ['questions'] as const,
@@ -9,5 +11,5 @@ export const questionQueryKeys = {
    * @example
    * const queryKey = questionQueryKeys.detail(questionId);
    */
-  detail: (questionId: string) => [...questionQueryKeys.all, 'detail', questionId] as const,
+  detail: (questionId: UUID | null) => [...questionQueryKeys.all, 'detail', questionId] as const,
 };

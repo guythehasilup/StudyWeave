@@ -18,7 +18,7 @@ import { useCancelQuestionMutation } from '../hooks/useCancelQuestionMutation';
 import { useCreateQuestionMutation } from '../hooks/useCreateQuestionMutation';
 import { useQuestion } from '../hooks/useQuestion';
 import { isActiveQuestionStatus } from '../questions.types';
-import type { QuestionFormValues, QuestionStatus } from '../questions.types';
+import type { QuestionFormValues, QuestionStatus, UUID } from '../questions.types';
 
 const QUESTION_DEFAULT_VALUES: QuestionFormValues = { questionText: '' };
 const QUESTION_STATUS_KEYS: Readonly<Record<QuestionStatus, ResourceKey>> = {
@@ -53,7 +53,7 @@ const validateQuestionText = (value: string): true | ResourceKey => {
  */
 export const QuestionsPage = (): ReactElement => {
   const { translate } = useTranslate();
-  const [questionId, setQuestionId] = useState<string | null>(null);
+  const [questionId, setQuestionId] = useState<UUID | null>(null);
   const createMutation = useCreateQuestionMutation();
   const cancelMutation = useCancelQuestionMutation();
   const questionQuery = useQuestion(questionId);

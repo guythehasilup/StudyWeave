@@ -6,6 +6,7 @@ import type {
   QuestionDto,
   QuestionResponseDto,
   QuestionStatus,
+  UUID,
 } from '../questions.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -72,6 +73,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isQuestionStatus = (value: unknown): value is QuestionStatus =>
   typeof value === 'string' && QUESTION_STATUSES.has(value as QuestionStatus);
 
+/** Validate and narrow an untrusted value to a UUID-shaped identifier. */
+const isUuid = (value: unknown): value is UUID =>
+  typeof value === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value);
+
 /**
  * Validate the text-only content returned by the current API.
  *
@@ -98,7 +104,7 @@ const isQuestionContent = (value: unknown): value is QuestionContent =>
  */
 const isQuestionResponseDto = (value: unknown): value is QuestionResponseDto =>
   isRecord(value) &&
-  typeof value.id === 'string' &&
+  isUuid(value.id) &&
   (value.providerResponseId === null || typeof value.providerResponseId === 'string') &&
   typeof value.createdAt === 'string' &&
   ((typeof value.answer === 'string' && value.errorCode === null) ||
@@ -116,7 +122,7 @@ const isQuestionResponseDto = (value: unknown): value is QuestionResponseDto =>
  */
 const isQuestionDto = (value: unknown): value is QuestionDto =>
   isRecord(value) &&
-  typeof value.id === 'string' &&
+  isUuid(value.id) &&
   isQuestionContent(value.content) &&
   isQuestionStatus(value.status) &&
   (value.status === 'completed'
@@ -240,10 +246,7 @@ export const createQuestion = async (input: CreateQuestionInput): Promise<Questi
  * @example
  * const question = await getQuestion(questionId, signal);
  */
-export const getQuestion = async (
-  questionId: string,
-  signal: AbortSignal,
-): Promise<QuestionDto> => {
+export const getQuestion = async (questionId: UUID, signal: AbortSignal): Promise<QuestionDto> => {
   const response = await fetch(API_BASE_URL + '/api/questions/' + encodeURIComponent(questionId), {
     headers: getAuthorizationHeaders(),
     signal,
@@ -262,7 +265,7 @@ export const getQuestion = async (
  * @example
  * const question = await cancelQuestion(questionId);
  */
-export const cancelQuestion = async (questionId: string): Promise<QuestionDto> => {
+export const cancelQuestion = async (questionId: UUID): Promise<QuestionDto> => {
   const response = await fetch(
     API_BASE_URL + '/api/questions/' + encodeURIComponent(questionId) + '/cancellations',
     {

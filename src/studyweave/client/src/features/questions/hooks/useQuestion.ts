@@ -4,7 +4,7 @@ import { getQuestion } from '../api/questions-api';
 import type { QuestionApiError } from '../api/questions-api';
 import { questionQueryKeys } from '../api/question-query-keys';
 import { isActiveQuestionStatus } from '../questions.types';
-import type { QuestionDto } from '../questions.types';
+import type { QuestionDto, UUID } from '../questions.types';
 
 /**
  * Poll one question while the worker can still change its status.
@@ -15,11 +15,14 @@ import type { QuestionDto } from '../questions.types';
  * const questionQuery = useQuestion(questionId);
  */
 export const useQuestion = (
-  questionId: string | null,
+  questionId: UUID | null,
 ): UseQueryResult<QuestionDto, QuestionApiError> =>
   useQuery({
-    queryKey: questionQueryKeys.detail(questionId ?? ''),
-    queryFn: ({ signal }) => getQuestion(questionId ?? '', signal),
+    queryKey: questionQueryKeys.detail(questionId),
+    queryFn: ({ signal }) => {
+      if (questionId === null) throw new Error('Question ID is required');
+      return getQuestion(questionId, signal);
+    },
     enabled: questionId !== null,
     refetchInterval: (query) => {
       const status = query.state.data?.status;

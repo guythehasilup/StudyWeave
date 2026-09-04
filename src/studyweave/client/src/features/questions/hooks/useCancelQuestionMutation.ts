@@ -3,7 +3,7 @@ import type { UseMutationResult } from '@tanstack/react-query';
 import { questionQueryKeys } from '../api/question-query-keys';
 import { cancelQuestion } from '../api/questions-api';
 import type { QuestionApiError } from '../api/questions-api';
-import type { QuestionDto } from '../questions.types';
+import type { QuestionDto, UUID } from '../questions.types';
 
 /**
  * Request cancellation and synchronize the selected question cache.
@@ -15,7 +15,7 @@ import type { QuestionDto } from '../questions.types';
 export const useCancelQuestionMutation = (): UseMutationResult<
   QuestionDto,
   QuestionApiError,
-  string
+  UUID
 > => {
   const queryClient = useQueryClient();
 

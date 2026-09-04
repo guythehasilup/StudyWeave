@@ -1,3 +1,6 @@
+/** Represent the canonical five-segment shape of a UUID identifier. */
+export type UUID = `${string}-${string}-${string}-${string}-${string}`;
+
 /**
  * Stable lifecycle state returned by the asynchronous question API.
  *
@@ -41,7 +44,7 @@ export interface QuestionContent {
  * };
  */
 export interface QuestionResponseMetadata {
-  readonly id: string;
+  readonly id: UUID;
   readonly providerResponseId: string | null;
   readonly createdAt: string;
 }
@@ -69,7 +72,7 @@ export type QuestionResponseDto = QuestionAnswerResponseDto | QuestionErrorRespo
  * const question: QuestionDto = { id, content, status: 'queued', response: null, createdAt, updatedAt };
  */
 export interface QuestionDtoMetadata {
-  readonly id: string;
+  readonly id: UUID;
   readonly content: QuestionContent;
   readonly createdAt: string;
   readonly updatedAt: string;
